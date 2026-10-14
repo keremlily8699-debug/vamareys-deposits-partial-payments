@@ -43,7 +43,7 @@ if ($order && $order->get_type() != AWCDP_POST_TYPE ) {
             if (!$payment_order) continue;
             $gateway = $payment_order ? $payment_order->get_payment_method_title() : '-';
             $payment_id = $payment_order ? '<a href="' . esc_url($payment_order->get_edit_order_url()) . '">' . $payment_order->get_order_number() . '</a>' : '-';
-            $status = $payment_order ? wc_get_order_status_name($payment_order->get_status()) : '-';
+            $status = ($payment_order && function_exists('wc_get_order_status_name')) ? wc_get_order_status_name($payment_order->get_status()) : ($payment_order ? $payment_order->get_status() : '-');
             $amount =  $payment_order->get_total() - $payment_order->get_total_refunded();
             $price_args = array('currency' => $payment_order->get_currency());
             ?>

@@ -126,6 +126,9 @@ class Vamariz_SnappPay {
         }
 
         $price = function_exists('wc_get_price_to_display') ? wc_get_price_to_display($product) : (method_exists($product, 'get_price') ? $product->get_price() : 0);
+        if ($price <= 0) {
+            return;
+        }
         $installment_amount = round($price / 4);
         ?>
         <div class="vamariz-installment-widget" id="vamariz-installment-widget">
@@ -165,6 +168,9 @@ class Vamariz_SnappPay {
         $price = 0;
         if (is_a($product, 'WC_Product')) {
             $price = function_exists('wc_get_price_to_display') ? wc_get_price_to_display($product) : (method_exists($product, 'get_price') ? $product->get_price() : 0);
+        }
+        if ($price <= 0) {
+            return;
         }
         $installment = round($price / 4);
         ?>

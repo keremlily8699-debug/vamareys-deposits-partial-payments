@@ -31,10 +31,26 @@ class Vamariz_Installments {
         // Hook into order placement to set status to Processing and create child sub-orders
         add_action('woocommerce_checkout_order_processed', array($this, 'on_checkout_order_processed'), 20, 3);
         add_action('woocommerce_payment_complete', array($this, 'on_payment_complete'), 20);
+        add_filter('woocommerce_payment_complete_order_status', array($this, 'filter_payment_complete_status'), 25, 2);
         add_action('woocommerce_order_status_completed', array($this, 'on_suborder_status_completed'), 20);
+        add_action('woocommerce_order_status_processing', array($this, 'on_suborder_status_completed'), 20);
 
         // Cart & Checkout validations for overdue debt and minimum amounts
         add_action('woocommerce_check_cart_items', array($this, 'validate_customer_eligibility'));
+    }
+
+    /**
+     * Ensure parent installment orders transition directly to processing on initial payment.
+     */
+    public function filter_payment_complete_status($status, $order_id) {
+        $order = function_exists('wc_get_order') ? wc_get_order($order_id) : false;
+        if ($order && $order->get_type() !== AWCDP_POST_TYPE) {
+            $is_installment = $order->get_meta('_vamariz_is_installment_order', true);
+            if ($is_installment === 'yes') {
+                return 'processing';
+            }
+        }
+        return $status;
     }
 
     /**
@@ -98,6 +114,10 @@ class Vamariz_Installments {
      * Check if a customer has any overdue sub-order.
      */
     public function has_overdue_installments($user_id) {
+        if (!function_exists('wc_get_orders')) {
+            return false;
+        }
+
         $now = current_time('timestamp');
         $sub_orders = wc_get_orders(array(
             'type'        => AWCDP_POST_TYPE,
@@ -119,6 +139,10 @@ class Vamariz_Installments {
      * Count active open installment parent orders for a customer.
      */
     public function get_active_installment_orders_count($user_id) {
+        if (!function_exists('wc_get_orders')) {
+            return 0;
+        }
+
         $orders = wc_get_orders(array(
             'customer_id' => $user_id,
             'status'      => array('wc-processing', 'wc-partially-paid', 'processing'),
@@ -182,6 +206,14 @@ class Vamariz_Installments {
             return;
         }
 
+        // If customer opted to pay full amount, do not tag as installment order
+        if ($order->get_meta('_awcdp_deposits_order_has_deposit', true) === 'no') {
+            return;
+        }
+        if (function_exists('WC') && WC()->cart && isset(WC()->cart->deposit_info['deposit_enabled']) && WC()->cart->deposit_info['deposit_enabled'] === false) {
+            return;
+        }
+
         $order->update_meta_data('_vamariz_is_installment_order', 'yes');
         $order->save();
     }
@@ -242,6 +274,20 @@ class Vamariz_Installments {
         );
 
         $created_sub_ids = array();
+        $payment_schedule = array(
+            'deposit' => array(
+                'id'    => $parent_order->get_id(),
+                'title' => 'قسط اول (۲۵٪ پیش‌پرداخت)',
+                'type'  => 'deposit',
+                'total' => $inst_amount,
+            ),
+        );
+
+        // Preserve existing deposit metadata if set by checkout
+        $existing_sched = $parent_order->get_meta('_awcdp_deposits_payment_schedule', true);
+        if (is_array($existing_sched) && isset($existing_sched['deposit'])) {
+            $payment_schedule['deposit'] = $existing_sched['deposit'];
+        }
 
         foreach ($schedules as $num => $info) {
             $current_amount = ($num === 4) ? $last_inst_amount : $inst_amount;
@@ -257,15 +303,31 @@ class Vamariz_Installments {
             $sub_order->set_address($parent_order->get_address('billing'), 'billing');
             $sub_order->set_address($parent_order->get_address('shipping'), 'shipping');
 
-            // Fee line item
+            // Fee line item (explicitly non-taxable to prevent double-taxing cart totals)
             $item_name = sprintf('قسط شماره %d از ۴ - سفارش #%s', $num, $parent_order->get_order_number());
             $item = new WC_Order_Item_Fee();
             $item->set_name($item_name);
             $item->set_total($current_amount);
+            if (method_exists($item, 'set_tax_status')) {
+                $item->set_tax_status('none');
+            }
+            if (method_exists($item, 'set_total_tax')) {
+                $item->set_total_tax(0);
+            }
             $sub_order->add_item($item);
 
             $sub_order->set_total($current_amount);
             $sub_order->set_status('pending');
+
+            if (method_exists($sub_order, 'set_cart_tax')) {
+                $sub_order->set_cart_tax(0);
+            }
+            if (method_exists($sub_order, 'set_shipping_tax')) {
+                $sub_order->set_shipping_tax(0);
+            }
+            if (method_exists($sub_order, 'set_order_key') && empty($sub_order->get_order_key())) {
+                $sub_order->set_order_key('wc_order_' . (function_exists('wp_generate_password') ? wp_generate_password(13, false) : uniqid()));
+            }
 
             // Meta tags
             $sub_order->update_meta_data('_vamariz_installment_number', $num);
@@ -277,9 +339,18 @@ class Vamariz_Installments {
 
             $sub_order->save();
             $created_sub_ids[$num] = $sub_order->get_id();
+
+            // Register into payment schedule for customer my-account and admin display
+            $payment_schedule[$due_timestamp] = array(
+                'id'    => $sub_order->get_id(),
+                'title' => $info['title'],
+                'type'  => 'partial_payment',
+                'total' => $current_amount,
+            );
         }
 
         $parent_order->update_meta_data('_vamariz_child_suborder_ids', $created_sub_ids);
+        $parent_order->update_meta_data('_awcdp_deposits_payment_schedule', $payment_schedule);
         $parent_order->save();
     }
 

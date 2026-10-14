@@ -318,10 +318,12 @@ class AWCDP_Order extends WC_Order {
 
   function get_order_item_totals($tax_display = ''){
     if (did_action('woocommerce_order_details_after_order_table_items')) {
-      return array($total_rows['order_total'] = array(
-          'label' => __('Partial Payment amount:', 'deposits-partial-payments-for-woocommerce'),
-          'value' => $this->get_formatted_order_total($tax_display),
-      ));
+      return array(
+          'order_total' => array(
+              'label' => __('Partial Payment amount:', 'deposits-partial-payments-for-woocommerce'),
+              'value' => method_exists($this, 'get_formatted_order_total') ? $this->get_formatted_order_total($tax_display) : (string)$this->get_total(),
+          ),
+      );
     }
     $tax_display = $tax_display ? $tax_display : get_option('woocommerce_tax_display_cart');
     $total_rows = array();

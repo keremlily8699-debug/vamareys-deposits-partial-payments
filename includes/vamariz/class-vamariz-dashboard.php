@@ -96,17 +96,18 @@ class Vamariz_Dashboard {
         if (isset($_GET['action'], $_GET['sub_order_id'], $_GET['_wpnonce']) && $_GET['action'] === 'send_manual_sms' && wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'vamariz_sms_nonce')) {
             $sub_id = intval($_GET['sub_order_id']);
             $res = Vamariz_SMS::send_installment_reminder($sub_id, 0);
-            $msg = $res['success'] ? 'sms_sent' : 'sms_failed';
+            $msg = !empty($res['success']) ? 'sms_sent' : 'sms_failed';
             wp_safe_redirect(add_query_arg(array('page' => 'vamariz-installments', 'tab' => 'orders', 'msg' => $msg), admin_url('admin.php')));
             exit;
         }
 
         // 4. Save Settings
         if (isset($_POST['vamariz_settings_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vamariz_settings_nonce'])), 'vamariz_save_settings_action')) {
-            update_option('vamariz_sms_api_url', sanitize_text_field(wp_unslash($_POST['vamariz_sms_api_url'])));
+            $api_url = function_exists('esc_url_raw') ? esc_url_raw(wp_unslash($_POST['vamariz_sms_api_url'])) : sanitize_text_field(wp_unslash($_POST['vamariz_sms_api_url']));
+            update_option('vamariz_sms_api_url', $api_url);
             update_option('vamariz_sms_from_number', sanitize_text_field(wp_unslash($_POST['vamariz_sms_from_number'])));
-            update_option('vamariz_min_installment_amount', floatval(wp_unslash($_POST['vamariz_min_installment_amount'])));
-            update_option('vamariz_max_active_orders', intval(wp_unslash($_POST['vamariz_max_active_orders'])));
+            update_option('vamariz_min_installment_amount', max(0, floatval(wp_unslash($_POST['vamariz_min_installment_amount']))));
+            update_option('vamariz_max_active_orders', max(1, intval(wp_unslash($_POST['vamariz_max_active_orders']))));
 
             wp_safe_redirect(add_query_arg(array('page' => 'vamariz-installments', 'tab' => 'settings', 'msg' => 'settings_saved'), admin_url('admin.php')));
             exit;
@@ -116,7 +117,7 @@ class Vamariz_Dashboard {
         if (isset($_POST['vamariz_test_sms_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vamariz_test_sms_nonce'])), 'vamariz_test_sms_action')) {
             $test_phone = sanitize_text_field(wp_unslash($_POST['test_phone']));
             $res = Vamariz_SMS::send_sms($test_phone, "تست اتصال سامانه ملی‌پیامک در سیستم اقساط واماریز با موفقیت انجام شد.");
-            $msg = $res['success'] ? 'test_sms_ok' : 'test_sms_fail';
+            $msg = !empty($res['success']) ? 'test_sms_ok' : 'test_sms_fail';
             wp_safe_redirect(add_query_arg(array('page' => 'vamariz-installments', 'tab' => 'settings', 'msg' => $msg), admin_url('admin.php')));
             exit;
         }
@@ -199,6 +200,11 @@ class Vamariz_Dashboard {
      * Tab 1: Orders and Installments Matrix
      */
     private function render_orders_tab() {
+        if (!function_exists('wc_get_orders')) {
+            echo '<div class="vamariz-panel"><p>' . esc_html__('ووکامرس فعال نیست. برای مشاهده سفارشات اقساطی، لطفاً ووکامرس را فعال کنید.', 'deposits-partial-payments-for-woocommerce') . '</p></div>';
+            return;
+        }
+
         // Query installment parent orders
         $orders = wc_get_orders(array(
             'limit'      => 50,

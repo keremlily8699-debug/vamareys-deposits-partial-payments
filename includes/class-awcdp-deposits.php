@@ -94,6 +94,9 @@ class AWCDP_Deposits
 
 
     function awcdp_register_order_status() {
+        if (!function_exists('register_post_status')) {
+            return;
+        }
 
         register_post_status('wc-partially-paid', array(
             'label' => _x('Partially paid', 'Order status', 'deposits-partial-payments-for-woocommerce'),

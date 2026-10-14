@@ -36,6 +36,7 @@ class Vamariz_Roles {
         add_action('woocommerce_after_checkout_registration_form', array($this, 'render_invite_registration_fields'));
         add_action('woocommerce_before_checkout_form', array($this, 'render_invite_registration_fields'));
         add_action('woocommerce_created_customer', array($this, 'handle_customer_registration_with_invite'), 10, 3);
+        add_action('user_register', array($this, 'handle_customer_registration_with_invite'), 10, 1);
         add_action('wp_login', array($this, 'handle_user_login_with_invite'), 10, 2);
         add_action('template_redirect', array($this, 'capture_invite_cookie'));
         add_action('init', array($this, 'capture_invite_cookie'), 20);
@@ -276,8 +277,8 @@ class Vamariz_Roles {
         if ($invite && $invite['status'] === 'pending') {
             $user = function_exists('get_userdata') ? get_userdata($customer_id) : false;
             if ($user) {
-                $user->add_role(self::ROLE_SLUG);
                 self::mark_invite_used($token, $customer_id);
+                $user->add_role(self::ROLE_SLUG);
                 // Clear cookie
                 if (!headers_sent()) {
                     $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
@@ -305,10 +306,10 @@ class Vamariz_Roles {
 
         $invite = self::get_invite($token);
         if ($invite && $invite['status'] === 'pending') {
+            self::mark_invite_used($token, $user->ID);
             if (!in_array(self::ROLE_SLUG, (array) $user->roles, true)) {
                 $user->add_role(self::ROLE_SLUG);
             }
-            self::mark_invite_used($token, $user->ID);
             if (!headers_sent()) {
                 $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
                 $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';

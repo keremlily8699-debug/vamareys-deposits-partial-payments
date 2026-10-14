@@ -47,7 +47,7 @@ if (!$order = wc_get_order($order_id)) {
       if(isset($payment['id']) && !empty($payment['id'])) $payment_order = wc_get_order($payment['id']);
       if(!$payment_order) continue;
       $payment_id = $payment_order ? $payment_order->get_order_number(): '-';
-      $status = $payment_order ? wc_get_order_status_name($payment_order->get_status()) : '-';
+      $status = ($payment_order && function_exists('wc_get_order_status_name')) ? wc_get_order_status_name($payment_order->get_status()) : ($payment_order ? $payment_order->get_status() : '-');
       $amount = $payment_order ? $payment_order->get_total() : $payment['total'];
       $price_args = array('currency' => $payment_order->get_currency());
       ?>

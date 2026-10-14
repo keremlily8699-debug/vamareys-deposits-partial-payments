@@ -87,11 +87,21 @@ class Vamariz_SMS {
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
 
+        $rec_id = null;
         if (isset($data['recId']) && !empty($data['recId'])) {
-            return array('success' => true, 'recId' => $data['recId'], 'status' => isset($data['status']) ? $data['status'] : '');
+            $rec_id = $data['recId'];
+        } elseif (isset($data['value']) && !empty($data['value'])) {
+            $rec_id = $data['value'];
+        } elseif (is_numeric($body) && intval($body) > 1000) {
+            $rec_id = trim($body);
         }
 
-        $error_msg = isset($data['status']) ? $data['status'] : 'خطای نامشخص در ارسال پیامک';
+        if ($rec_id !== null) {
+            $status = isset($data['status']) ? $data['status'] : (isset($data['strRetStatus']) ? $data['strRetStatus'] : 'ارسال موفق');
+            return array('success' => true, 'recId' => $rec_id, 'status' => $status);
+        }
+
+        $error_msg = isset($data['status']) ? $data['status'] : (isset($data['strRetStatus']) ? $data['strRetStatus'] : 'خطای نامشخص در ارسال پیامک');
         return array('success' => false, 'message' => $error_msg, 'response' => $body);
     }
 
@@ -140,7 +150,11 @@ class Vamariz_SMS {
     public static function send_order_created_notification($order_id) {
         $order = wc_get_order($order_id);
         if (!$order) {
-            return false;
+            return array('success' => false, 'message' => 'سفارش یافت نشد.');
+        }
+
+        if ($order->get_meta('_vamariz_created_sms_sent', true) === 'yes') {
+            return array('success' => true, 'message' => 'پیامک قبلاً ارسال شده است.');
         }
 
         $phone = $order->get_billing_phone();
@@ -152,7 +166,12 @@ class Vamariz_SMS {
             $order->get_order_number()
         );
 
-        return self::send_sms($phone, $text);
+        $res = self::send_sms($phone, $text);
+        if (!empty($res['success'])) {
+            $order->update_meta_data('_vamariz_created_sms_sent', 'yes');
+            $order->save();
+        }
+        return $res;
     }
 
     /**
@@ -161,7 +180,7 @@ class Vamariz_SMS {
     public static function send_installment_reminder($sub_order_id, $days_left = 3) {
         $sub_order = wc_get_order($sub_order_id);
         if (!$sub_order) {
-            return false;
+            return array('success' => false, 'message' => 'سفارش قسط یافت نشد.');
         }
 
         $parent = wc_get_order($sub_order->get_parent_id());
@@ -198,7 +217,7 @@ class Vamariz_SMS {
         }
 
         $res = self::send_sms($phone, $text);
-        if ($res['success']) {
+        if (!empty($res['success'])) {
             $sub_order->update_meta_data('_vamariz_last_reminder_date', current_time('Y-m-d'));
             $sub_order->save();
         }
@@ -211,7 +230,11 @@ class Vamariz_SMS {
     public static function send_payment_received_notification($sub_order_id) {
         $sub_order = wc_get_order($sub_order_id);
         if (!$sub_order) {
-            return false;
+            return array('success' => false, 'message' => 'سفارش قسط یافت نشد.');
+        }
+
+        if ($sub_order->get_meta('_vamariz_payment_sms_sent', true) === 'yes') {
+            return array('success' => true, 'message' => 'پیامک وصول قسط قبلاً ارسال شده است.');
         }
 
         $parent = wc_get_order($sub_order->get_parent_id());
@@ -223,15 +246,30 @@ class Vamariz_SMS {
         $installment_num = $sub_order->get_meta('_vamariz_installment_number', true);
         $amount = number_format($sub_order->get_total());
 
-        $text = sprintf(
-            "%s عزیز، پرداخت قسط شماره %s سفارش #%s به مبلغ %s تومان با موفقیت وصول گردید.\nاز خوش‌حسابی و همراهی شما سپاسگزاریم.\nفروشگاه اینترنتی واماریز",
-            $name,
-            $installment_num ? $installment_num : '',
-            $order_num,
-            $amount
-        );
+        $is_final = ($installment_num == 4 || $installment_num === '4');
+        if ($is_final) {
+            $text = sprintf(
+                "%s عزیز، پرداخت قسط نهایی (چهارم) سفارش #%s به مبلغ %s تومان با موفقیت وصول گردید و تمامی اقساط شما به طور کامل تسویه شد.\nاز خوش‌حسابی و همراهی صمیمانه شما با واماریز سپاسگزاریم.\nفروشگاه اینترنتی واماریز",
+                $name,
+                $order_num,
+                $amount
+            );
+        } else {
+            $text = sprintf(
+                "%s عزیز، پرداخت قسط شماره %s سفارش #%s به مبلغ %s تومان با موفقیت وصول گردید.\nاز خوش‌حسابی و همراهی شما سپاسگزاریم.\nفروشگاه اینترنتی واماریز",
+                $name,
+                $installment_num ? $installment_num : '',
+                $order_num,
+                $amount
+            );
+        }
 
-        return self::send_sms($phone, $text);
+        $res = self::send_sms($phone, $text);
+        if (!empty($res['success'])) {
+            $sub_order->update_meta_data('_vamariz_payment_sms_sent', 'yes');
+            $sub_order->save();
+        }
+        return $res;
     }
 
     /**
@@ -240,7 +278,7 @@ class Vamariz_SMS {
     public static function send_overdue_notification($sub_order_id) {
         $sub_order = wc_get_order($sub_order_id);
         if (!$sub_order) {
-            return false;
+            return array('success' => false, 'message' => 'سفارش قسط یافت نشد.');
         }
 
         $parent = wc_get_order($sub_order->get_parent_id());
@@ -251,7 +289,7 @@ class Vamariz_SMS {
         $order_num = $parent ? $parent->get_order_number() : $sub_order->get_order_number();
         $installment_num = $sub_order->get_meta('_vamariz_installment_number', true);
         $amount = number_format($sub_order->get_total());
-        $pay_url = $sub_order->get_checkout_payment_url();
+        $pay_url = method_exists($sub_order, 'get_checkout_payment_url') ? $sub_order->get_checkout_payment_url() : home_url('/checkout/order-pay/' . $sub_order->get_id() . '/');
 
         $text = sprintf(
             "هشدار تاخیر قسط - %s عزیز، سررسید قسط شماره %s سفارش #%s به مبلغ %s تومان سپری شده و هنوز تسویه نشده است.\nجهت جلوگیری از مسدود شدن امتیاز خرید اقساطی شما در واماریز، لطفاً سریعاً از لینک زیر تسویه فرمایید:\n%s\nواماریز",
@@ -263,7 +301,7 @@ class Vamariz_SMS {
         );
 
         $res = self::send_sms($phone, $text);
-        if ($res['success']) {
+        if (!empty($res['success'])) {
             $sub_order->update_meta_data('_vamariz_last_overdue_sms_date', current_time('Y-m-d'));
             $sub_order->save();
         }
@@ -334,6 +372,14 @@ class Vamariz_SMS {
 
         foreach ($sub_orders as $sub_order) {
             if (!$sub_order || $sub_order->is_paid()) {
+                continue;
+            }
+
+            if (method_exists($sub_order, 'has_status') && $sub_order->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+                continue;
+            }
+
+            if (method_exists($sub_order, 'get_status') && in_array($sub_order->get_status(), array('cancelled', 'refunded', 'failed', 'trash', 'wc-cancelled', 'wc-refunded', 'wc-failed'), true)) {
                 continue;
             }
 

@@ -216,7 +216,9 @@ class AWCDP_Front_End
 
     function awcdp_register_shortcodes()
     {
-       add_shortcode('awcdp_deposit', array($this, 'awcdp_shortcode_deposit_function'));
+       if (function_exists('add_shortcode')) {
+           add_shortcode('awcdp_deposit', array($this, 'awcdp_shortcode_deposit_function'));
+       }
     }
 
     function awcdp_shortcode_deposit_function($atts){

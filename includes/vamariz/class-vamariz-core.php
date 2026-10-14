@@ -33,6 +33,15 @@ class Vamariz_Core {
         Vamariz_Installments::instance();
         if (is_admin()) {
             Vamariz_Dashboard::instance();
+            if (!class_exists('WooCommerce')) {
+                add_action('admin_notices', array($this, 'render_woocommerce_missing_notice'));
+            }
         }
+    }
+
+    public function render_woocommerce_missing_notice() {
+        echo '<div class="notice notice-warning is-dismissible"><p>' .
+            esc_html__('افزونه خرید اقساطی ۴ ماهه واماریز برای فعالیت کامل نیازمند فعال بودن ووکامرس است. لطفاً افزونه ووکامرس را فعال نمایید.', 'deposits-partial-payments-for-woocommerce') .
+            '</p></div>';
     }
 }
