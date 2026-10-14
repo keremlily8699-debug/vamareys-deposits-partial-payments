@@ -790,8 +790,6 @@ class AWCDP_Backend
     public function install()
     {
         $this->_log_version_number();
-
-        flush_rewrite_rules();
     }
 
     /**

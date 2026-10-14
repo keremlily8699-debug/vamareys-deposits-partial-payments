@@ -50,7 +50,7 @@ class Vamariz_SnappPay {
      * Setup product page hooks: suppress SnappPay widget and inject Vamariz widget.
      */
     public function setup_product_page_hooks() {
-        if (!is_product()) {
+        if (!function_exists('is_product') || !is_product()) {
             return;
         }
 
@@ -80,7 +80,7 @@ class Vamariz_SnappPay {
      * Enqueue styles and dynamic JS for the PDP widget and modal.
      */
     public function enqueue_frontend_assets() {
-        if (!is_product() && !is_cart() && !is_checkout()) {
+        if (!function_exists('is_product') || (!is_product() && !is_cart() && !is_checkout())) {
             return;
         }
 
@@ -164,7 +164,7 @@ class Vamariz_SnappPay {
      * Render Responsive Modal Dialog at wp_footer.
      */
     public function render_installment_modal() {
-        if (!is_product() || !Vamariz_Roles::is_installment_customer()) {
+        if (!function_exists('is_product') || !is_product() || !Vamariz_Roles::is_installment_customer()) {
             return;
         }
 

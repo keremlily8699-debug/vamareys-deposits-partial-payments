@@ -97,22 +97,29 @@ if (did_action('plugins_loaded')) {
 }
 
 register_activation_hook(__FILE__, function() {
-    if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php')) {
-        require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php';
-        Vamariz_Roles::activate();
-    }
-    if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-sms.php')) {
-        require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-sms.php';
-        Vamariz_SMS::instance()->maybe_schedule_cron();
-    }
-    if (function_exists('flush_rewrite_rules')) {
-        flush_rewrite_rules();
+    try {
+        if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php')) {
+            require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php';
+            Vamariz_Roles::activate();
+        }
+        if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-sms.php')) {
+            require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-sms.php';
+            Vamariz_SMS::instance()->maybe_schedule_cron();
+        }
+    } catch (\Throwable $e) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Vamariz activation notice: ' . $e->getMessage());
+        }
     }
 });
 
 register_deactivation_hook(__FILE__, function() {
-    if (function_exists('wp_clear_scheduled_hook')) {
-        wp_clear_scheduled_hook('vamariz_daily_installment_cron');
+    try {
+        if (function_exists('wp_clear_scheduled_hook')) {
+            wp_clear_scheduled_hook('vamariz_daily_installment_cron');
+        }
+    } catch (\Throwable $e) {
+        // Silent fail on deactivation
     }
 });
 
