@@ -39,13 +39,16 @@ if ($order && $order->get_type() != AWCDP_POST_TYPE ) {
             }
             $date = apply_filters('awcdp_partial_payment_title', $date, $payment);
             $payment_order = false;
-            if (isset($payment['id']) && !empty($payment['id'])) $payment_order = wc_get_order($payment['id']);
-            if (!$payment_order) continue;
+            if (isset($payment['id']) && !empty($payment['id'])) {
+                $payment_order = wc_get_order($payment['id']);
+            }
             $gateway = $payment_order ? $payment_order->get_payment_method_title() : '-';
             $payment_id = $payment_order ? '<a href="' . esc_url($payment_order->get_edit_order_url()) . '">' . $payment_order->get_order_number() . '</a>' : '-';
-            $status = ($payment_order && function_exists('wc_get_order_status_name')) ? wc_get_order_status_name($payment_order->get_status()) : ($payment_order ? $payment_order->get_status() : '-');
-            $amount =  $payment_order->get_total() - $payment_order->get_total_refunded();
-            $price_args = array('currency' => $payment_order->get_currency());
+            $status = ($payment_order && function_exists('wc_get_order_status_name')) ? wc_get_order_status_name($payment_order->get_status()) : ($payment_order ? $payment_order->get_status() : esc_html__('در انتظار سررسید', 'deposits-partial-payments-for-woocommerce'));
+            $amount = $payment_order ? ($payment_order->get_total() - (method_exists($payment_order, 'get_total_refunded') ? $payment_order->get_total_refunded() : 0)) : (isset($payment['total']) ? $payment['total'] : 0);
+            $currency = $payment_order ? $payment_order->get_currency() : ($order ? $order->get_currency() : 'IRT');
+            $price_args = array('currency' => $currency);
+            $view_btn = $payment_order ? '<a href="' . esc_url($payment_order->get_edit_order_url()) . '" class="button">' . esc_html__('View', 'deposits-partial-payments-for-woocommerce') . '</a>' : '-';
             ?>
             <tr>
               <td><?php echo wp_kses_post( $payment_id); ?></td>
@@ -53,7 +56,7 @@ if ($order && $order->get_type() != AWCDP_POST_TYPE ) {
               <td><?php echo wp_kses_post( $gateway); ?></td>
               <td><?php echo wp_kses_post( wc_price($amount, $price_args)); ?></td>
               <td><?php echo wp_kses_post( $status); ?></td>
-              <td><a href="<?php echo esc_url($payment_order->get_edit_order_url()); ?>" class="button" > <?php esc_html_e('View', 'deposits-partial-payments-for-woocommerce'); ?> </a></td>
+              <td><?php echo wp_kses_post( $view_btn); ?></td>
             </tr>
             <?php
           }

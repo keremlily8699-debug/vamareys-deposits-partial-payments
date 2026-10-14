@@ -221,6 +221,15 @@ class Vamariz_Dashboard {
         $now = current_time('timestamp');
 
         foreach ($orders as $o) {
+            $is_cancelled = false;
+            if (method_exists($o, 'has_status') && $o->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+                $is_cancelled = true;
+            } elseif (method_exists($o, 'get_status') && in_array($o->get_status(), array('cancelled', 'refunded', 'failed', 'trash', 'wc-cancelled', 'wc-refunded', 'wc-failed'), true)) {
+                $is_cancelled = true;
+            }
+            if ($is_cancelled) {
+                continue;
+            }
             $total_receivable += $o->get_total();
             // Installment 1 is collected
             $total_collected += round($o->get_total() / 4, 2);
@@ -325,9 +334,21 @@ class Vamariz_Dashboard {
                                         <?php
                                         $sub_id = isset($child_ids[$i]) ? $child_ids[$i] : 0;
                                         $sub = $sub_id ? wc_get_order($sub_id) : false;
+                                        $sub_cancelled = false;
+                                        if (method_exists($order, 'has_status') && $order->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+                                            $sub_cancelled = true;
+                                        } elseif (method_exists($order, 'get_status') && in_array($order->get_status(), array('cancelled', 'refunded', 'failed', 'trash', 'wc-cancelled', 'wc-refunded', 'wc-failed'), true)) {
+                                            $sub_cancelled = true;
+                                        } elseif ($sub && method_exists($sub, 'has_status') && $sub->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+                                            $sub_cancelled = true;
+                                        } elseif ($sub && method_exists($sub, 'get_status') && in_array($sub->get_status(), array('cancelled', 'refunded', 'failed', 'trash', 'wc-cancelled', 'wc-refunded', 'wc-failed'), true)) {
+                                            $sub_cancelled = true;
+                                        }
                                         if (!$sub):
                                             echo '<span class="vamariz-badge vamariz-badge-future">-</span>';
-                                        elseif ($sub->is_paid()):
+                                        elseif ($sub_cancelled):
+                                            echo '<span class="vamariz-badge vamariz-badge-future">لغو شده</span>';
+                                        elseif (method_exists($sub, 'is_paid') && $sub->is_paid()):
                                             echo '<span class="vamariz-badge vamariz-badge-paid">✓ پرداخت شد</span>';
                                         else:
                                             $due = intval($sub->get_meta('_vamariz_due_date', true));

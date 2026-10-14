@@ -32,8 +32,11 @@ class Vamariz_Installments {
         add_action('woocommerce_checkout_order_processed', array($this, 'on_checkout_order_processed'), 20, 3);
         add_action('woocommerce_payment_complete', array($this, 'on_payment_complete'), 20);
         add_filter('woocommerce_payment_complete_order_status', array($this, 'filter_payment_complete_status'), 25, 2);
-        add_action('woocommerce_order_status_completed', array($this, 'on_suborder_status_completed'), 20);
-        add_action('woocommerce_order_status_processing', array($this, 'on_suborder_status_completed'), 20);
+        add_action('woocommerce_order_status_completed', array($this, 'on_order_status_completed'), 20);
+        add_action('woocommerce_order_status_processing', array($this, 'on_order_status_processing'), 20);
+        add_action('woocommerce_order_status_cancelled', array($this, 'on_order_status_cancelled_or_refunded'), 20);
+        add_action('woocommerce_order_status_refunded', array($this, 'on_order_status_cancelled_or_refunded'), 20);
+        add_action('woocommerce_order_status_failed', array($this, 'on_order_status_cancelled_or_refunded'), 20);
 
         // Cart & Checkout validations for overdue debt and minimum amounts
         add_action('woocommerce_check_cart_items', array($this, 'validate_customer_eligibility'));
@@ -59,6 +62,13 @@ class Vamariz_Installments {
     public function restrict_deposits_to_installment_customers($enabled = true, $product_id = 0) {
         if (!Vamariz_Roles::is_installment_customer()) {
             return false;
+        }
+        $min_amount = floatval(get_option('vamariz_min_installment_amount', 0));
+        if ($min_amount > 0 && $product_id > 0) {
+            $product = function_exists('wc_get_product') ? wc_get_product($product_id) : false;
+            if ($product && (method_exists($product, 'get_price') ? floatval($product->get_price()) : 0) < $min_amount) {
+                return false;
+            }
         }
         return $enabled;
     }
@@ -93,8 +103,18 @@ class Vamariz_Installments {
 
         // 2. Check minimum order amount for installment
         $min_amount = floatval(get_option('vamariz_min_installment_amount', 0));
-        if ($min_amount > 0 && WC()->cart && WC()->cart->get_total('edit') < $min_amount) {
-            // Only inform if cart total is less than minimum
+        if ($min_amount > 0 && function_exists('WC') && WC()->cart) {
+            $is_deposit = !empty(WC()->cart->deposit_info['deposit_enabled']);
+            $cart_total = isset(WC()->cart->total) ? floatval(WC()->cart->total) : (method_exists(WC()->cart, 'get_total') ? floatval(WC()->cart->get_total('edit')) : 0);
+            if ($is_deposit && $cart_total > 0 && $cart_total < $min_amount) {
+                wc_add_notice(
+                    sprintf(
+                        esc_html__('حداقل مبلغ سفارش برای استفاده از طرح اقساطی واماریز %s تومان می‌باشد.', 'deposits-partial-payments-for-woocommerce'),
+                        number_format($min_amount)
+                    ),
+                    'error'
+                );
+            }
         }
 
         // 3. Check active open orders limit
@@ -129,6 +149,16 @@ class Vamariz_Installments {
         foreach ($sub_orders as $sub_order) {
             $due_date = intval($sub_order->get_meta('_vamariz_due_date', true));
             if ($due_date > 0 && $due_date < $now) {
+                // Ensure parent order is active and not cancelled, refunded, failed, or trashed
+                $parent = wc_get_order($sub_order->get_parent_id());
+                if ($parent) {
+                    if (method_exists($parent, 'has_status') && $parent->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+                        continue;
+                    }
+                    if (method_exists($parent, 'get_status') && in_array($parent->get_status(), array('cancelled', 'refunded', 'failed', 'trash', 'wc-cancelled', 'wc-refunded', 'wc-failed'), true)) {
+                        continue;
+                    }
+                }
                 return true;
             }
         }
@@ -261,6 +291,9 @@ class Vamariz_Installments {
         }
 
         $total = floatval($parent_order->get_total());
+        if ($total <= 0) {
+            return;
+        }
         $decimals = function_exists('wc_get_price_decimals') ? wc_get_price_decimals() : 0;
         $inst_amount = round($total / 4, $decimals);
         // Absorb rounding remainder into the 4th installment
@@ -371,7 +404,7 @@ class Vamariz_Installments {
                 $all_paid = true;
                 foreach ($child_ids as $sub_id) {
                     $child = wc_get_order($sub_id);
-                    if ($child && !$child->is_paid()) {
+                    if (!$child || !$child->is_paid()) {
                         $all_paid = false;
                         break;
                     }
@@ -385,12 +418,74 @@ class Vamariz_Installments {
     }
 
     /**
-     * Handle status change to completed on sub-order.
+     * Handle status change to processing.
      */
-    public function on_suborder_status_completed($order_id) {
+    public function on_order_status_processing($order_id) {
         $order = wc_get_order($order_id);
-        if ($order && $order->get_type() === AWCDP_POST_TYPE) {
+        if (!$order) {
+            return;
+        }
+        if ($order->get_type() === AWCDP_POST_TYPE) {
             $this->handle_suborder_payment_completed($order);
+        } else {
+            // Parent order transitioned to processing: ensure sub-orders are generated if not already done
+            $is_installment = $order->get_meta('_vamariz_is_installment_order', true);
+            if ($is_installment === 'yes') {
+                $existing_subs = $order->get_meta('_vamariz_child_suborder_ids', true);
+                if (empty($existing_subs) || !is_array($existing_subs)) {
+                    $this->create_vamariz_installment_suborders($order);
+                    Vamariz_SMS::send_order_created_notification($order->get_id());
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle status change to completed.
+     */
+    public function on_order_status_completed($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+        if ($order->get_type() === AWCDP_POST_TYPE) {
+            $this->handle_suborder_payment_completed($order);
+        } else {
+            // Parent order transitioned to completed: ensure sub-orders are generated if not already done
+            $is_installment = $order->get_meta('_vamariz_is_installment_order', true);
+            if ($is_installment === 'yes') {
+                $existing_subs = $order->get_meta('_vamariz_child_suborder_ids', true);
+                if (empty($existing_subs) || !is_array($existing_subs)) {
+                    $this->create_vamariz_installment_suborders($order);
+                    Vamariz_SMS::send_order_created_notification($order->get_id());
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle status change to cancelled, refunded, or failed.
+     */
+    public function on_order_status_cancelled_or_refunded($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order || $order->get_type() === AWCDP_POST_TYPE) {
+            return;
+        }
+
+        $is_installment = $order->get_meta('_vamariz_is_installment_order', true);
+        if ($is_installment === 'yes') {
+            $child_ids = $order->get_meta('_vamariz_child_suborder_ids', true);
+            if (is_array($child_ids)) {
+                $parent_status = $order->get_status();
+                $target_status = in_array($parent_status, array('refunded', 'failed'), true) ? $parent_status : 'cancelled';
+                foreach ($child_ids as $sub_id) {
+                    $child = wc_get_order($sub_id);
+                    if ($child && !$child->is_paid()) {
+                        $child->update_status($target_status, sprintf(esc_html__('لغو خودکار قسط به دلیل تغییر وضعیت سفارش اصلی به %s', 'deposits-partial-payments-for-woocommerce'), $parent_status));
+                        $child->save();
+                    }
+                }
+            }
         }
     }
 }

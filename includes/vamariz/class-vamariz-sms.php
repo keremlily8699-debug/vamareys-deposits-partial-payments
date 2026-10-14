@@ -133,15 +133,15 @@ class Vamariz_SMS {
 
         // If it is a 10-digit Iranian mobile starting with 9, format as 09xxxxxxxxx
         if (strlen($phone) === 10 && substr($phone, 0, 1) === '9') {
-            return '0' . $phone;
+            $phone = '0' . $phone;
         }
 
-        // Fallback: if already starts with 09 and is 11 digits
-        if (strlen($phone) === 11 && substr($phone, 0, 2) === '09') {
+        // Strictly validate 11 digits starting with 09
+        if (strlen($phone) === 11 && substr($phone, 0, 2) === '09' && preg_match('/^09\d{9}$/', $phone)) {
             return $phone;
         }
 
-        return !empty($phone) ? ('0' . $phone) : '';
+        return '';
     }
 
     /**
@@ -183,7 +183,15 @@ class Vamariz_SMS {
             return array('success' => false, 'message' => 'سفارش قسط یافت نشد.');
         }
 
+        if ($sub_order->is_paid() || (method_exists($sub_order, 'has_status') && $sub_order->has_status(array('cancelled', 'refunded', 'failed', 'trash')))) {
+            return array('success' => false, 'message' => 'این قسط تسویه یا لغو شده است.');
+        }
+
         $parent = wc_get_order($sub_order->get_parent_id());
+        if ($parent && method_exists($parent, 'has_status') && $parent->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+            return array('success' => false, 'message' => 'سفارش اصلی لغو یا مسترد شده است.');
+        }
+
         $phone = $parent ? $parent->get_billing_phone() : $sub_order->get_billing_phone();
         $name = $parent ? $parent->get_billing_first_name() : $sub_order->get_billing_first_name();
         $name = $name ? $name : 'مشتری';
@@ -281,7 +289,15 @@ class Vamariz_SMS {
             return array('success' => false, 'message' => 'سفارش قسط یافت نشد.');
         }
 
+        if ($sub_order->is_paid() || (method_exists($sub_order, 'has_status') && $sub_order->has_status(array('cancelled', 'refunded', 'failed', 'trash')))) {
+            return array('success' => false, 'message' => 'این قسط تسویه یا لغو شده است.');
+        }
+
         $parent = wc_get_order($sub_order->get_parent_id());
+        if ($parent && method_exists($parent, 'has_status') && $parent->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+            return array('success' => false, 'message' => 'سفارش اصلی لغو یا مسترد شده است.');
+        }
+
         $phone = $parent ? $parent->get_billing_phone() : $sub_order->get_billing_phone();
         $name = $parent ? $parent->get_billing_first_name() : $sub_order->get_billing_first_name();
         $name = $name ? $name : 'مشتری';
@@ -334,7 +350,7 @@ class Vamariz_SMS {
             $sub_orders = wc_get_orders(array(
                 'type'        => AWCDP_POST_TYPE,
                 'status'      => array('wc-pending', 'pending'),
-                'limit'       => 100,
+                'limit'       => -1,
                 'meta_query'  => array(
                     array(
                         'key'     => '_vamariz_due_date',
@@ -346,7 +362,7 @@ class Vamariz_SMS {
             $args = array(
                 'post_type'      => AWCDP_POST_TYPE,
                 'post_status'    => array('wc-pending', 'pending'),
-                'posts_per_page' => 100,
+                'posts_per_page' => -1,
                 'meta_query'     => array(
                     array(
                         'key'     => '_vamariz_due_date',
@@ -380,6 +396,20 @@ class Vamariz_SMS {
             }
 
             if (method_exists($sub_order, 'get_status') && in_array($sub_order->get_status(), array('cancelled', 'refunded', 'failed', 'trash', 'wc-cancelled', 'wc-refunded', 'wc-failed'), true)) {
+                continue;
+            }
+
+            // Skip if parent order is missing, cancelled, refunded, failed, or trashed
+            $parent = wc_get_order($sub_order->get_parent_id());
+            if (!$parent) {
+                continue;
+            }
+
+            if (method_exists($parent, 'has_status') && $parent->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
+                continue;
+            }
+
+            if (method_exists($parent, 'get_status') && in_array($parent->get_status(), array('cancelled', 'refunded', 'failed', 'trash', 'wc-cancelled', 'wc-refunded', 'wc-failed'), true)) {
                 continue;
             }
 

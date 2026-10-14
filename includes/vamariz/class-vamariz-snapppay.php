@@ -129,6 +129,10 @@ class Vamariz_SnappPay {
         if ($price <= 0) {
             return;
         }
+        $min_amt = floatval(get_option('vamariz_min_installment_amount', 0));
+        if ($min_amt > 0 && $price < $min_amt) {
+            return;
+        }
         $installment_amount = round($price / 4);
         ?>
         <div class="vamariz-installment-widget" id="vamariz-installment-widget">
@@ -170,6 +174,10 @@ class Vamariz_SnappPay {
             $price = function_exists('wc_get_price_to_display') ? wc_get_price_to_display($product) : (method_exists($product, 'get_price') ? $product->get_price() : 0);
         }
         if ($price <= 0) {
+            return;
+        }
+        $min_amt = floatval(get_option('vamariz_min_installment_amount', 0));
+        if ($min_amt > 0 && $price < $min_amt) {
             return;
         }
         $installment = round($price / 4);

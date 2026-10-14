@@ -44,12 +44,14 @@ if (!$order = wc_get_order($order_id)) {
       }
       $title = apply_filters('awcdp_partial_payment_title',$title,$payment);
       $payment_order = false;
-      if(isset($payment['id']) && !empty($payment['id'])) $payment_order = wc_get_order($payment['id']);
-      if(!$payment_order) continue;
-      $payment_id = $payment_order ? $payment_order->get_order_number(): '-';
-      $status = ($payment_order && function_exists('wc_get_order_status_name')) ? wc_get_order_status_name($payment_order->get_status()) : ($payment_order ? $payment_order->get_status() : '-');
-      $amount = $payment_order ? $payment_order->get_total() : $payment['total'];
-      $price_args = array('currency' => $payment_order->get_currency());
+      if (isset($payment['id']) && !empty($payment['id'])) {
+          $payment_order = wc_get_order($payment['id']);
+      }
+      $payment_id = $payment_order ? $payment_order->get_order_number() : '-';
+      $status = ($payment_order && function_exists('wc_get_order_status_name')) ? wc_get_order_status_name($payment_order->get_status()) : ($payment_order ? $payment_order->get_status() : esc_html__('در انتظار سررسید', 'deposits-partial-payments-for-woocommerce'));
+      $amount = $payment_order ? $payment_order->get_total() : (isset($payment['total']) ? $payment['total'] : 0);
+      $currency = $payment_order ? $payment_order->get_currency() : ($order ? $order->get_currency() : 'IRT');
+      $price_args = array('currency' => $currency);
       ?>
       <tr>
           <td> <strong>#<?php echo wp_kses_post( $payment_id); ?></strong> </td>
@@ -57,7 +59,7 @@ if (!$order = wc_get_order($order_id)) {
           <td> <strong><?php echo wp_kses_post( wc_price($amount,$price_args)); ?></strong> </td>
           <td>
               <span><?php echo wp_kses_post( $status); ?></span>
-              <?php if ($payment_order && !$payment_order->is_paid() && $payment_order->needs_payment()): ?>
+              <?php if ($payment_order && !$payment_order->is_paid() && (method_exists($payment_order, 'needs_payment') ? $payment_order->needs_payment() : true)): ?>
                   <a href="<?php echo esc_url($payment_order->get_checkout_payment_url()); ?>" class="button pay" style="margin-right: 8px; font-size: 11px; padding: 4px 10px; background: #0f172a; color: #fff;">
                       <?php esc_html_e('پرداخت آنلاین این قسط', 'deposits-partial-payments-for-woocommerce'); ?>
                   </a>
