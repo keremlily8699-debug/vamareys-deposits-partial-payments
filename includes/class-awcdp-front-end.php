@@ -2237,7 +2237,7 @@ class AWCDP_Front_End
 
     function awcdp_delete_partial_payments($id){
 
-        if (!current_user_can('delete_posts') || !$id) {
+        if (!function_exists('current_user_can') || !current_user_can('delete_posts') || !$id) {
           return;
         }
         // $post_type = get_post_type($id);
@@ -2272,7 +2272,7 @@ class AWCDP_Front_End
 
     function awcdp_trash_partial_payments($id){
 
-      if (!current_user_can('delete_posts') || !$id) {
+      if (!function_exists('current_user_can') || !current_user_can('delete_posts') || !$id) {
         return;
       }
 

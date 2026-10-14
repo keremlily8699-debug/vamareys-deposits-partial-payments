@@ -139,7 +139,7 @@ class AWCDP_Compatibility
      **/
     public function get_permission()
     {
-        if (current_user_can('administrator') || current_user_can('manage_woocommerce')) {
+        if (function_exists('current_user_can') && (current_user_can('administrator') || current_user_can('manage_woocommerce'))) {
             return true;
         } else {
             return false;

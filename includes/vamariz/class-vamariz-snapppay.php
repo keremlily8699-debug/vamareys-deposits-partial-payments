@@ -106,12 +106,12 @@ class Vamariz_SnappPay {
         global $product;
         $price = 0;
         if (is_product() && is_a($product, 'WC_Product')) {
-            $price = wc_get_price_to_display($product);
+            $price = function_exists('wc_get_price_to_display') ? wc_get_price_to_display($product) : (method_exists($product, 'get_price') ? $product->get_price() : 0);
         }
 
         wp_localize_script('vamariz-product-js', 'vamarizData', array(
             'basePrice'    => $price,
-            'currency'     => get_woocommerce_currency_symbol(),
+            'currency'     => function_exists('get_woocommerce_currency_symbol') ? get_woocommerce_currency_symbol() : 'تومان',
             'currencyText' => 'تومان',
         ));
     }
@@ -125,7 +125,7 @@ class Vamariz_SnappPay {
             return;
         }
 
-        $price = wc_get_price_to_display($product);
+        $price = function_exists('wc_get_price_to_display') ? wc_get_price_to_display($product) : (method_exists($product, 'get_price') ? $product->get_price() : 0);
         $installment_amount = round($price / 4);
         ?>
         <div class="vamariz-installment-widget" id="vamariz-installment-widget">
@@ -164,7 +164,7 @@ class Vamariz_SnappPay {
         global $product;
         $price = 0;
         if (is_a($product, 'WC_Product')) {
-            $price = wc_get_price_to_display($product);
+            $price = function_exists('wc_get_price_to_display') ? wc_get_price_to_display($product) : (method_exists($product, 'get_price') ? $product->get_price() : 0);
         }
         $installment = round($price / 4);
         ?>

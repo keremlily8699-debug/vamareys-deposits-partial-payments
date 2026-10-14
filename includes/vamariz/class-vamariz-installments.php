@@ -40,11 +40,11 @@ class Vamariz_Installments {
     /**
      * Ensure deposits are only enabled for installment_customer.
      */
-    public function restrict_deposits_to_installment_customers($enabled, $product_id = 0) {
+    public function restrict_deposits_to_installment_customers($enabled = true, $product_id = 0) {
         if (!Vamariz_Roles::is_installment_customer()) {
             return false;
         }
-        return true;
+        return $enabled;
     }
 
     /**
@@ -133,7 +133,11 @@ class Vamariz_Installments {
      * Enforce exactly 4 equal installments of 25%.
      */
     public function enforce_four_stage_schedule($schedule, $total, $deposit_amount) {
-        $installment_amount = round($total / 4, 2);
+        $total = floatval($total);
+        $decimals = function_exists('wc_get_price_decimals') ? wc_get_price_decimals() : 0;
+        $installment_amount = round($total / 4, $decimals);
+        // Absorb rounding remainder in the 4th installment for exact reconciliation
+        $last_installment_amount = round($total - ($installment_amount * 3), $decimals);
         $now = current_time('timestamp');
 
         $new_schedule = array(
@@ -159,7 +163,7 @@ class Vamariz_Installments {
                 'id'    => '',
                 'title' => esc_html__('قسط چهارم (۲۵٪)', 'deposits-partial-payments-for-woocommerce'),
                 'type'  => 'partial_payment',
-                'total' => $installment_amount,
+                'total' => $last_installment_amount,
             ),
         );
 
@@ -215,13 +219,20 @@ class Vamariz_Installments {
      * Generate the 3 subsequent sub-orders for installments 2, 3, and 4.
      */
     public function create_vamariz_installment_suborders($parent_order) {
+        if (!class_exists('WC_Order')) {
+            return;
+        }
+
         $existing_subs = $parent_order->get_meta('_vamariz_child_suborder_ids', true);
         if (!empty($existing_subs) && is_array($existing_subs)) {
             return; // Already created
         }
 
         $total = floatval($parent_order->get_total());
-        $inst_amount = round($total / 4, 2);
+        $decimals = function_exists('wc_get_price_decimals') ? wc_get_price_decimals() : 0;
+        $inst_amount = round($total / 4, $decimals);
+        // Absorb rounding remainder into the 4th installment
+        $last_inst_amount = round($total - ($inst_amount * 3), $decimals);
         $order_time = $parent_order->get_date_created() ? $parent_order->get_date_created()->getTimestamp() : current_time('timestamp');
 
         $schedules = array(
@@ -233,6 +244,7 @@ class Vamariz_Installments {
         $created_sub_ids = array();
 
         foreach ($schedules as $num => $info) {
+            $current_amount = ($num === 4) ? $last_inst_amount : $inst_amount;
             $due_timestamp = strtotime('+' . $info['days'] . ' days', $order_time);
 
             $sub_order = new AWCDP_Order();
@@ -249,10 +261,10 @@ class Vamariz_Installments {
             $item_name = sprintf('قسط شماره %d از ۴ - سفارش #%s', $num, $parent_order->get_order_number());
             $item = new WC_Order_Item_Fee();
             $item->set_name($item_name);
-            $item->set_total($inst_amount);
+            $item->set_total($current_amount);
             $sub_order->add_item($item);
 
-            $sub_order->set_total($inst_amount);
+            $sub_order->set_total($current_amount);
             $sub_order->set_status('pending');
 
             // Meta tags
@@ -261,6 +273,7 @@ class Vamariz_Installments {
             $sub_order->update_meta_data('_vamariz_is_overdue', 'no');
             $sub_order->update_meta_data('_awcdp_deposits_payment_type', 'partial_payment');
             $sub_order->update_meta_data('_awcdp_deposits_partial_payment_date', $due_timestamp);
+            $sub_order->update_meta_data('is_vat_exempt', $parent_order->get_meta('is_vat_exempt'));
 
             $sub_order->save();
             $created_sub_ids[$num] = $sub_order->get_id();

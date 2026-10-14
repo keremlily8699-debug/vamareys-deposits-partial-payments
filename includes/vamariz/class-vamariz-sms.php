@@ -108,21 +108,30 @@ class Vamariz_SMS {
         $phone = str_replace($persian, $english, $phone);
         $phone = str_replace($arabic, $english, $phone);
 
-        // Strip non-digit characters except leading +
-        $phone = preg_replace('/[^\d+]/', '', $phone);
+        // Strip all non-digit characters
+        $phone = preg_replace('/\D/', '', $phone);
 
-        // Normalize country prefix (+98, 0098, 989..., 9...)
-        if (strpos($phone, '+98') === 0) {
-            $phone = '0' . substr($phone, 3);
-        } elseif (strpos($phone, '0098') === 0) {
-            $phone = '0' . substr($phone, 4);
-        } elseif (strpos($phone, '98') === 0 && strlen($phone) === 12 && substr($phone, 2, 1) === '9') {
-            $phone = '0' . substr($phone, 2);
-        } elseif (strlen($phone) === 10 && substr($phone, 0, 1) === '9') {
-            $phone = '0' . $phone;
+        // Strip country code prefix (0098 or 98)
+        if (strpos($phone, '0098') === 0) {
+            $phone = substr($phone, 4);
+        } elseif (strpos($phone, '98') === 0 && strlen($phone) >= 12) {
+            $phone = substr($phone, 2);
         }
 
-        return $phone;
+        // Strip any leading zeros
+        $phone = ltrim($phone, '0');
+
+        // If it is a 10-digit Iranian mobile starting with 9, format as 09xxxxxxxxx
+        if (strlen($phone) === 10 && substr($phone, 0, 1) === '9') {
+            return '0' . $phone;
+        }
+
+        // Fallback: if already starts with 09 and is 11 digits
+        if (strlen($phone) === 11 && substr($phone, 0, 2) === '09') {
+            return $phone;
+        }
+
+        return !empty($phone) ? ('0' . $phone) : '';
     }
 
     /**
@@ -164,15 +173,17 @@ class Vamariz_SMS {
         $installment_num = $sub_order->get_meta('_vamariz_installment_number', true);
         $installment_num = $installment_num ? $installment_num : 'بعدی';
         $amount = number_format($sub_order->get_total());
-        $pay_url = $sub_order->get_checkout_payment_url();
+        $pay_url = method_exists($sub_order, 'get_checkout_payment_url') ? $sub_order->get_checkout_payment_url() : home_url('/checkout/order-pay/' . $sub_order->get_id() . '/');
 
         if ($days_left > 0) {
+            $days_text = ($days_left == 1) ? 'فردا' : ($days_left . ' روز آینده');
             $text = sprintf(
-                "%s عزیز، یادآوری سررسید قسط شماره %s سفارش #%s در واماریز:\nمبلغ: %s تومان\nسررسید: ۳ روز آینده\nجهت تسویه آنلاین و مستقیم روی لینک زیر کلیک کنید:\n%s\nواماریز",
+                "%s عزیز، یادآوری سررسید قسط شماره %s سفارش #%s در واماریز:\nمبلغ: %s تومان\nسررسید: %s\nجهت تسویه آنلاین و مستقیم روی لینک زیر کلیک کنید:\n%s\nواماریز",
                 $name,
                 $installment_num,
                 $order_num,
                 $amount,
+                $days_text,
                 $pay_url
             );
         } else {
@@ -331,22 +342,31 @@ class Vamariz_SMS {
                 continue;
             }
 
-            $last_sent = $sub_order->get_meta('_vamariz_last_reminder_date', true);
+            $before_sent = $sub_order->get_meta('_vamariz_reminder_before_sent', true);
+            $due_sent    = $sub_order->get_meta('_vamariz_reminder_due_sent', true);
             $last_overdue_sent = $sub_order->get_meta('_vamariz_last_overdue_sms_date', true);
 
             // Difference in days
             $diff_seconds = $due_date - $today;
             $diff_days = round($diff_seconds / 86400);
 
-            // 3 days before
-            if ($diff_days <= 3 && $diff_days > 0 && $last_sent !== $today_str) {
-                self::send_installment_reminder($sub_order->get_id(), 3);
+            // 1. Upcoming reminder (1 to 3 days before due date, sent once)
+            if ($diff_days <= 3 && $diff_days > 0 && empty($before_sent)) {
+                $res = self::send_installment_reminder($sub_order->get_id(), $diff_days);
+                if (!empty($res['success'])) {
+                    $sub_order->update_meta_data('_vamariz_reminder_before_sent', $today_str);
+                    $sub_order->save();
+                }
             }
-            // On due day
-            elseif ($diff_days == 0 && $last_sent !== $today_str) {
-                self::send_installment_reminder($sub_order->get_id(), 0);
+            // 2. On due day (today)
+            elseif ($diff_days == 0 && $due_sent !== $today_str) {
+                $res = self::send_installment_reminder($sub_order->get_id(), 0);
+                if (!empty($res['success'])) {
+                    $sub_order->update_meta_data('_vamariz_reminder_due_sent', $today_str);
+                    $sub_order->save();
+                }
             }
-            // Overdue by 2 or more days
+            // 3. Overdue by 2 or more days
             elseif ($diff_days <= -2 && $last_overdue_sent !== $today_str) {
                 $sub_order->update_meta_data('_vamariz_is_overdue', 'yes');
                 $sub_order->save();

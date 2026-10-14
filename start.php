@@ -105,6 +105,9 @@ register_activation_hook(__FILE__, function() {
         require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-sms.php';
         Vamariz_SMS::instance()->maybe_schedule_cron();
     }
+    if (function_exists('flush_rewrite_rules')) {
+        flush_rewrite_rules();
+    }
 });
 
 register_deactivation_hook(__FILE__, function() {

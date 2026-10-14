@@ -1,4 +1,8 @@
 <?php
+if (!class_exists('WC_Order')) {
+    return;
+}
+
 class AWCDP_Order extends WC_Order {
 
   function get_type(){
@@ -30,7 +34,7 @@ class AWCDP_Order extends WC_Order {
     if($parent){
       return $parent->get_user();
     }
-    return $this->get_user_id() ? get_user_by('id', $this->get_user_id()) : false;
+    return ($this->get_user_id() && function_exists('get_user_by')) ? get_user_by('id', $this->get_user_id()) : false;
   }
 
   function get_address_prop($prop, $address = 'billing', $context = 'view'){
@@ -39,7 +43,7 @@ class AWCDP_Order extends WC_Order {
       return $parent->get_address_prop($prop, $address, $context);
     }
     $value = null;
-    if (array_key_exists($prop, $this->data[$address])) {
+    if (isset($this->data[$address]) && is_array($this->data[$address]) && array_key_exists($prop, $this->data[$address])) {
       $value = isset($this->changes[$address][$prop]) ? $this->changes[$address][$prop] : $this->data[$address][$prop];
       if ('view' === $context) {
         $value = apply_filters($this->get_hook_prefix() . $address . '_' . $prop, $value, $this);

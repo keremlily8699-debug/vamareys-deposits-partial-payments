@@ -31,10 +31,14 @@ class Vamariz_Roles {
         add_action('personal_options_update', array($this, 'save_user_profile_fields'));
         add_action('edit_user_profile_update', array($this, 'save_user_profile_fields'));
 
-        // Registration with invite token
+        // Registration and checkout with invite token
         add_action('woocommerce_register_form', array($this, 'render_invite_registration_fields'));
+        add_action('woocommerce_after_checkout_registration_form', array($this, 'render_invite_registration_fields'));
+        add_action('woocommerce_before_checkout_form', array($this, 'render_invite_registration_fields'));
         add_action('woocommerce_created_customer', array($this, 'handle_customer_registration_with_invite'), 10, 3);
+        add_action('wp_login', array($this, 'handle_user_login_with_invite'), 10, 2);
         add_action('template_redirect', array($this, 'capture_invite_cookie'));
+        add_action('init', array($this, 'capture_invite_cookie'), 20);
     }
 
     /**
@@ -166,26 +170,9 @@ class Vamariz_Roles {
     }
 
     /**
-     * Capture invite token into cookie if present in URL.
+     * Capture invite token into cookie if present in URL, or redeem immediately if user is logged in.
      */
     public function capture_invite_cookie() {
-        if (!empty($_GET['vamariz_invite'])) {
-            $token = sanitize_text_field(wp_unslash($_GET['vamariz_invite']));
-            $invite = self::get_invite($token);
-            if ($invite && $invite['status'] === 'pending') {
-                if (!headers_sent()) {
-                    $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
-                    $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
-                    setcookie('vamariz_invite_token', $token, time() + 86400 * 3, $cookie_path, $cookie_domain, is_ssl(), true);
-                }
-            }
-        }
-    }
-
-    /**
-     * Render invite information in WooCommerce registration form.
-     */
-    public function render_invite_registration_fields() {
         $token = '';
         if (!empty($_GET['vamariz_invite'])) {
             $token = sanitize_text_field(wp_unslash($_GET['vamariz_invite']));
@@ -202,6 +189,63 @@ class Vamariz_Roles {
             return;
         }
 
+        // 1. If user is already logged in, immediately activate their installment access
+        if (function_exists('is_user_logged_in') && is_user_logged_in() && function_exists('get_current_user_id')) {
+            $user_id = get_current_user_id();
+            if ($user_id > 0 && function_exists('get_userdata')) {
+                $user = get_userdata($user_id);
+                if ($user) {
+                    if (!in_array(self::ROLE_SLUG, (array) $user->roles, true)) {
+                        $user->add_role(self::ROLE_SLUG);
+                    }
+                    self::mark_invite_used($token, $user_id);
+                    // Clear cookie if set
+                    if (!headers_sent()) {
+                        $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
+                        $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+                        setcookie('vamariz_invite_token', '', time() - 3600, $cookie_path, $cookie_domain);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // 2. If guest, preserve token in cookie for registration / checkout
+        if (!empty($_GET['vamariz_invite']) && !headers_sent()) {
+            $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
+            $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+            setcookie('vamariz_invite_token', $token, time() + 86400 * 3, $cookie_path, $cookie_domain, is_ssl(), true);
+        }
+    }
+
+    /**
+     * Render invite information in WooCommerce registration and checkout forms.
+     */
+    public function render_invite_registration_fields() {
+        static $rendered = false;
+        if ($rendered) {
+            return;
+        }
+
+        $token = '';
+        if (!empty($_GET['vamariz_invite'])) {
+            $token = sanitize_text_field(wp_unslash($_GET['vamariz_invite']));
+        } elseif (!empty($_POST['vamariz_invite_token'])) {
+            $token = sanitize_text_field(wp_unslash($_POST['vamariz_invite_token']));
+        } elseif (!empty($_COOKIE['vamariz_invite_token'])) {
+            $token = sanitize_text_field(wp_unslash($_COOKIE['vamariz_invite_token']));
+        }
+
+        if (empty($token)) {
+            return;
+        }
+
+        $invite = self::get_invite($token);
+        if (!$invite || $invite['status'] !== 'pending') {
+            return;
+        }
+
+        $rendered = true;
         echo '<div class="woocommerce-message" style="background:#f4fbf7; border-color:#2ecc71; color:#27ae60; font-size:14px; margin-bottom:15px; padding:12px 15px; border-radius:6px;">'
             . sprintf(
                 esc_html__('سلام %s عزیز! شما با دعوت‌نامه اختصاصی واماریز وارد شده‌اید. پس از ثبت‌نام، حساب شما بلافاصله به عنوان «مشتری اقساطی» فعال خواهد شد.', 'deposits-partial-payments-for-woocommerce'),
@@ -214,10 +258,12 @@ class Vamariz_Roles {
     /**
      * Automatically assign installment_customer role on registration with valid invite token.
      */
-    public function handle_customer_registration_with_invite($customer_id, $new_customer_data, $password_generated) {
+    public function handle_customer_registration_with_invite($customer_id, $new_customer_data = array(), $password_generated = false) {
         $token = '';
         if (!empty($_POST['vamariz_invite_token'])) {
             $token = sanitize_text_field(wp_unslash($_POST['vamariz_invite_token']));
+        } elseif (!empty($_GET['vamariz_invite'])) {
+            $token = sanitize_text_field(wp_unslash($_GET['vamariz_invite']));
         } elseif (!empty($_COOKIE['vamariz_invite_token'])) {
             $token = sanitize_text_field(wp_unslash($_COOKIE['vamariz_invite_token']));
         }
@@ -228,7 +274,7 @@ class Vamariz_Roles {
 
         $invite = self::get_invite($token);
         if ($invite && $invite['status'] === 'pending') {
-            $user = get_userdata($customer_id);
+            $user = function_exists('get_userdata') ? get_userdata($customer_id) : false;
             if ($user) {
                 $user->add_role(self::ROLE_SLUG);
                 self::mark_invite_used($token, $customer_id);
@@ -238,6 +284,35 @@ class Vamariz_Roles {
                     $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
                     setcookie('vamariz_invite_token', '', time() - 3600, $cookie_path, $cookie_domain);
                 }
+            }
+        }
+    }
+
+    /**
+     * Automatically assign installment_customer role when user logs in with active invite token.
+     */
+    public function handle_user_login_with_invite($user_login, $user) {
+        $token = '';
+        if (!empty($_GET['vamariz_invite'])) {
+            $token = sanitize_text_field(wp_unslash($_GET['vamariz_invite']));
+        } elseif (!empty($_COOKIE['vamariz_invite_token'])) {
+            $token = sanitize_text_field(wp_unslash($_COOKIE['vamariz_invite_token']));
+        }
+
+        if (empty($token) || !is_object($user) || empty($user->ID)) {
+            return;
+        }
+
+        $invite = self::get_invite($token);
+        if ($invite && $invite['status'] === 'pending') {
+            if (!in_array(self::ROLE_SLUG, (array) $user->roles, true)) {
+                $user->add_role(self::ROLE_SLUG);
+            }
+            self::mark_invite_used($token, $user->ID);
+            if (!headers_sent()) {
+                $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
+                $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+                setcookie('vamariz_invite_token', '', time() - 3600, $cookie_path, $cookie_domain);
             }
         }
     }
@@ -318,9 +393,9 @@ class Vamariz_Roles {
      * Get invite URL.
      */
     public static function get_invite_url($token) {
-        $account_url = wc_get_page_permalink('myaccount');
+        $account_url = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('myaccount') : '';
         if (!$account_url) {
-            $account_url = home_url('/my-account/');
+            $account_url = function_exists('home_url') ? home_url('/my-account/') : '/my-account/';
         }
         return add_query_arg('vamariz_invite', $token, $account_url);
     }

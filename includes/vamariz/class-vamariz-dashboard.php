@@ -325,13 +325,17 @@ class Vamariz_Dashboard {
                                             echo '<span class="vamariz-badge vamariz-badge-paid">✓ پرداخت شد</span>';
                                         else:
                                             $due = intval($sub->get_meta('_vamariz_due_date', true));
-                                            $diff = round(($due - $now) / 86400);
-                                            if ($diff < 0):
-                                                echo '<span class="vamariz-badge vamariz-badge-overdue">معوق (' . abs($diff) . ' روز تاخیر)</span>';
-                                            elseif ($diff <= 3):
-                                                echo '<span class="vamariz-badge vamariz-badge-warning">' . $diff . ' روز تا موعد</span>';
+                                            if ($due <= 0):
+                                                echo '<span class="vamariz-badge vamariz-badge-future">-</span>';
                                             else:
-                                                echo '<span class="vamariz-badge vamariz-badge-future">' . date('m/d', $due) . '</span>';
+                                                $diff = round(($due - $now) / 86400);
+                                                if ($diff < 0):
+                                                    echo '<span class="vamariz-badge vamariz-badge-overdue">معوق (' . abs($diff) . ' روز تاخیر)</span>';
+                                                elseif ($diff <= 3):
+                                                    echo '<span class="vamariz-badge vamariz-badge-warning">' . $diff . ' روز تا موعد</span>';
+                                                else:
+                                                    echo '<span class="vamariz-badge vamariz-badge-future">' . date('m/d', $due) . '</span>';
+                                                endif;
                                             endif;
                                             ?>
                                             <div style="margin-top: 4px;">
@@ -345,7 +349,7 @@ class Vamariz_Dashboard {
 
                                 <td>
                                     <span class="order-status status-<?php echo esc_attr($order->get_status()); ?>">
-                                        <?php echo esc_html(wc_get_order_status_name($order->get_status())); ?>
+                                        <?php echo esc_html(function_exists('wc_get_order_status_name') ? wc_get_order_status_name($order->get_status()) : $order->get_status()); ?>
                                     </span>
                                 </td>
                                 <td>
