@@ -1,0 +1,203 @@
+/* Vamariz Admin Dashboard Styling */
+
+.vamariz-admin-wrap {
+    font-family: inherit;
+    margin: 20px 20px 0 0;
+}
+
+.vamariz-admin-header {
+    background: #ffffff;
+    padding: 20px 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    margin-bottom: 20px;
+}
+
+.vamariz-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.vamariz-badge-logo {
+    width: 44px;
+    height: 44px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 900;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vamariz-brand h1 {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.vamariz-brand p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* Nav Tabs */
+.vamariz-nav-tabs {
+    border-bottom: 2px solid #cbd5e1;
+    display: flex;
+    gap: 8px;
+}
+
+.vamariz-nav-tabs .nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 8px 8px 0 0;
+    border: none;
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.vamariz-nav-tabs .nav-tab-active {
+    background: #0f172a;
+    color: #ffffff !important;
+}
+
+/* KPI Cards */
+.vamariz-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 960px) {
+    .vamariz-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.vamariz-kpi-card {
+    background: #ffffff;
+    padding: 18px 20px;
+    border-radius: 12px;
+    border-right: 4px solid #3b82f6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.vamariz-kpi-card.vamariz-kpi-green {
+    border-right-color: #10b981;
+}
+
+.vamariz-kpi-card.vamariz-kpi-orange {
+    border-right-color: #f59e0b;
+}
+
+.vamariz-kpi-card.vamariz-kpi-red {
+    border-right-color: #ef4444;
+}
+
+.vamariz-kpi-title {
+    display: block;
+    font-size: 12.5px;
+    color: #64748b;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.vamariz-kpi-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.vamariz-kpi-value small {
+    font-size: 13px;
+    font-weight: normal;
+    color: #64748b;
+}
+
+.vamariz-kpi-sub {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+/* Panels */
+.vamariz-panel {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f1f5f9;
+}
+
+.vamariz-panel-header {
+    margin-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 12px;
+}
+
+.vamariz-panel-header h2 {
+    font-size: 16px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    color: #0f172a;
+}
+
+.vamariz-panel-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12.5px;
+}
+
+/* Badges */
+.vamariz-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.vamariz-badge-paid {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.vamariz-badge-warning {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.vamariz-badge-overdue {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.vamariz-badge-future {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.vamariz-order-link {
+    text-decoration: none;
+    color: #0f172a;
+}
+
+.vamariz-order-link:hover {
+    color: #2563eb;
+}

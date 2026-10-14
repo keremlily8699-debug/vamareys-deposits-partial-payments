@@ -354,9 +354,15 @@ class AWCDP_Front_End
       $display = ( $default_checked != 'deposit' ) ? 'style="display:none;"' : '' ;
 
       $awcdp_ts = get_option('awcdp_text_settings');
-      $deposit_text = ( isset($awcdp_ts['pay_deposit_text']) && ( $awcdp_ts['pay_deposit_text'] != '' ) ) ? $awcdp_ts['pay_deposit_text'] : esc_html__('Pay Deposit', 'deposits-partial-payments-for-woocommerce' );
-      $full_text = ( isset($awcdp_ts['pay_full_text'])  && ( $awcdp_ts['pay_deposit_text'] != '') ) ? $awcdp_ts['pay_full_text'] : esc_html__('Pay full amount', 'deposits-partial-payments-for-woocommerce' );
-      $deposit_option_text = ( isset($awcdp_ts['deposit_text']) && ( $awcdp_ts['deposit_text'] != '' ) ) ? $awcdp_ts['deposit_text'] : esc_html__('Pay a deposit of ', 'deposits-partial-payments-for-woocommerce' );
+      if (class_exists('Vamariz_Roles') && Vamariz_Roles::is_installment_customer()) {
+          $deposit_text = 'خرید در ۴ قسط ماهانه (پرداخت قسط اول)';
+          $full_text = 'پرداخت کامل نقدی';
+          $deposit_option_text = 'پیش‌پرداخت قسط اول (۲۵٪): ';
+      } else {
+          $deposit_text = ( isset($awcdp_ts['pay_deposit_text']) && ( $awcdp_ts['pay_deposit_text'] != '' ) ) ? $awcdp_ts['pay_deposit_text'] : esc_html__('Pay Deposit', 'deposits-partial-payments-for-woocommerce' );
+          $full_text = ( isset($awcdp_ts['pay_full_text'])  && ( $awcdp_ts['pay_deposit_text'] != '') ) ? $awcdp_ts['pay_full_text'] : esc_html__('Pay full amount', 'deposits-partial-payments-for-woocommerce' );
+          $deposit_option_text = ( isset($awcdp_ts['deposit_text']) && ( $awcdp_ts['deposit_text'] != '' ) ) ? $awcdp_ts['deposit_text'] : esc_html__('Pay a deposit of ', 'deposits-partial-payments-for-woocommerce' );
+      }
     // sprintf( $deposit_text, '<span class="awcdp-deposits-amount">' . $amount . '</span>' );
     ?>
 
@@ -392,31 +398,31 @@ class AWCDP_Front_End
 
   function awcdp_deposits_enabled( $product_id ){
 
+    if (class_exists('Vamariz_Roles') && !Vamariz_Roles::is_installment_customer()) {
+      return false;
+    }
+
     $product = wc_get_product( $product_id );
 
     if (!apply_filters('awcdp_disable_deposit_condition', $product, true)) { return; }
 
-    //if ( ! $product || $product->is_type( array( 'grouped', 'external', 'bundle', 'composite', 'easy_product_bundle' ) ) ) {
     if ( ! $product || $product->is_type( array( 'grouped', 'external', 'bundle', 'composite' ) ) ) {
-    //if ( ! $product || $product->is_type( array( 'external', 'bundle', 'composite' ) ) ) {
       return false;
     }
 
-    $awcdp_gs = get_option('awcdp_general_settings');
-    if( isset($awcdp_gs['enable_deposits']) && $awcdp_gs['enable_deposits'] == 1){
-      $enabledP = get_post_meta( $product_id, AWCDP_DEPOSITS_META_KEY, true );
-      if ( $enabledP != 'no' ) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
+    $enabledP = get_post_meta( $product_id, AWCDP_DEPOSITS_META_KEY, true );
+    if ( $enabledP === 'no' ) {
       return false;
     }
 
+    return true;
   }
 
   function awcdp_get_deposit_type($product_id){
+
+    if (class_exists('Vamariz_Roles') && Vamariz_Roles::is_installment_customer()) {
+      return 'percent';
+    }
 
     $type = false;
     $product = wc_get_product($product_id);
@@ -444,6 +450,10 @@ class AWCDP_Front_End
 
   function awcdp_get_deposit_amount($product_id){
 
+    if (class_exists('Vamariz_Roles') && Vamariz_Roles::is_installment_customer()) {
+      return 25;
+    }
+
     $amount = false;
     $product = wc_get_product($product_id);
 
@@ -468,6 +478,9 @@ class AWCDP_Front_End
 
   
   function user_restriction(){
+    if (class_exists('Vamariz_Roles')) {
+      return Vamariz_Roles::is_installment_customer() ? 1 : 0;
+    }
 
     $awcdp_gs = get_option('awcdp_general_settings');
     $require_login = (isset($awcdp_gs['require_login']) && $awcdp_gs['require_login'] == 1) ? 1 : 0;

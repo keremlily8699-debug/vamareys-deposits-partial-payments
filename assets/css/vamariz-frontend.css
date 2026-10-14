@@ -1,0 +1,360 @@
+/* Vamariz Frontend RTL Styles - PDP Widget & Modal */
+
+.vamariz-installment-widget {
+    direction: rtl;
+    text-align: right;
+    margin: 18px 0 22px 0;
+    padding: 16px 18px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    font-family: inherit;
+    transition: all 0.25s ease;
+}
+
+.vamariz-installment-widget:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+}
+
+.vamariz-widget-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    color: #0f172a;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+}
+
+.vamariz-badge-dot {
+    width: 7px;
+    height: 7px;
+    background-color: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.vamariz-widget-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.vamariz-widget-title {
+    font-size: 13.5px;
+    color: #475569;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.vamariz-installment-amount {
+    font-size: 19px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.vamariz-installment-amount .vamariz-currency {
+    font-size: 12px;
+    font-weight: normal;
+    color: #64748b;
+    margin-right: 3px;
+}
+
+.vamariz-modal-trigger {
+    background: #0f172a;
+    color: #ffffff !important;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.vamariz-modal-trigger:hover {
+    background: #1e293b;
+    transform: translateY(-1px);
+}
+
+.vamariz-widget-sub {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+/* Modal Overlay & Dialog */
+.vamariz-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    direction: rtl;
+    text-align: right;
+    box-sizing: border-box;
+}
+
+.vamariz-modal-dialog {
+    background: #ffffff;
+    width: 100%;
+    max-width: 540px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: vamarizFadeIn 0.22s ease-out;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes vamarizFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.vamariz-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.vamariz-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vamariz-logo-icon {
+    width: 32px;
+    height: 32px;
+    background: #0f172a;
+    color: #ffffff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+}
+
+.vamariz-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.vamariz-modal-close {
+    background: none;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.15s ease;
+}
+
+.vamariz-modal-close:hover {
+    color: #0f172a;
+}
+
+.vamariz-modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+}
+
+/* Breakdown Card */
+.vamariz-breakdown-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 18px;
+}
+
+.vamariz-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 12.5px;
+    color: #475569;
+}
+
+.vamariz-total-pill {
+    background: #e2e8f0;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #1e293b;
+}
+
+.vamariz-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+@media (max-width: 480px) {
+    .vamariz-steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.vamariz-step-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vamariz-step-item.active-step {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.vamariz-step-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.vamariz-step-amount {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.vamariz-step-date {
+    font-size: 10px;
+    color: #64748b;
+}
+
+/* Info Section */
+.vamariz-info-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.vamariz-info-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vamariz-info-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.vamariz-circle-num {
+    width: 26px;
+    height: 26px;
+    background: #0f172a;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.vamariz-info-steps strong {
+    font-size: 13px;
+    color: #0f172a;
+    display: block;
+}
+
+.vamariz-info-steps p {
+    font-size: 12px;
+    color: #64748b;
+    margin: 3px 0 0 0;
+    line-height: 1.5;
+}
+
+.vamariz-terms-box {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #fffbeb;
+    border: 1px solid #fef3c7;
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: #92400e;
+    line-height: 1.6;
+}
+
+.vamariz-terms-box strong {
+    display: block;
+    margin-bottom: 3px;
+}
+
+.vamariz-terms-box p {
+    margin: 0;
+}
+
+.vamariz-modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid #f1f5f9;
+    text-align: left;
+}
+
+.vamariz-btn-primary {
+    background: #0f172a;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s ease;
+}
+
+.vamariz-btn-primary:hover {
+    background: #1e293b;
+}

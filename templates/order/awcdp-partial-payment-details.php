@@ -14,14 +14,14 @@ if (!$order = wc_get_order($order_id)) {
 
 ?>
 
-<p class="awcdp_deposits_summary_title"><?php esc_html_e('Partial payment details', 'deposits-partial-payments-for-woocommerce') ?></p>
-<table class="woocommerce-table  awcdp_deposits_summary">
+<p class="awcdp_deposits_summary_title"><?php esc_html_e('جدول وضعیت اقساط ۴ ماهه واماریز', 'deposits-partial-payments-for-woocommerce') ?></p>
+<table class="woocommerce-table awcdp_deposits_summary" dir="rtl">
   <thead>
     <tr>
-        <th ><?php esc_html_e('ID', 'deposits-partial-payments-for-woocommerce'); ?></th>
-        <th ><?php esc_html_e('Payment', 'deposits-partial-payments-for-woocommerce'); ?></th>
-        <th><?php esc_html_e('Amount', 'deposits-partial-payments-for-woocommerce'); ?></th>
-        <th><?php esc_html_e('Status', 'deposits-partial-payments-for-woocommerce'); ?></th>
+        <th><?php esc_html_e('شناسه قسط', 'deposits-partial-payments-for-woocommerce'); ?></th>
+        <th><?php esc_html_e('عنوان / سررسید', 'deposits-partial-payments-for-woocommerce'); ?></th>
+        <th><?php esc_html_e('مبلغ قسط', 'deposits-partial-payments-for-woocommerce'); ?></th>
+        <th><?php esc_html_e('وضعیت و تسویه', 'deposits-partial-payments-for-woocommerce'); ?></th>
     </tr>
   </thead>
   <tbody>
@@ -32,14 +32,14 @@ if (!$order = wc_get_order($order_id)) {
         } else {
           if(!is_numeric($timestamp)){
             if($timestamp === 'unlimited'){
-              $title = esc_html__('Future Payments', 'deposits-partial-payments-for-woocommerce');
+              $title = esc_html__('اقساط آتی', 'deposits-partial-payments-for-woocommerce');
             } elseif($timestamp === 'deposit'){
-              $title = esc_html__('Deposit', 'deposits-partial-payments-for-woocommerce');
+              $title = esc_html__('قسط اول (پیش‌پرداخت)', 'deposits-partial-payments-for-woocommerce');
             } else {
               $title = $timestamp;
             }
           } else {
-            $title =  date_i18n(wc_date_format(),$timestamp);
+            $title = date_i18n(wc_date_format(),$timestamp);
           }
       }
       $title = apply_filters('awcdp_partial_payment_title',$title,$payment);
@@ -52,10 +52,17 @@ if (!$order = wc_get_order($order_id)) {
       $price_args = array('currency' => $payment_order->get_currency());
       ?>
       <tr>
-          <td> <?php echo wp_kses_post( $payment_id); ?> </td>
+          <td> <strong>#<?php echo wp_kses_post( $payment_id); ?></strong> </td>
           <td> <?php echo wp_kses_post( $title); ?> </td>
-          <td> <?php echo wp_kses_post( wc_price($amount,$price_args)); ?> </td>
-          <td> <?php echo wp_kses_post( $status); ?> </td>
+          <td> <strong><?php echo wp_kses_post( wc_price($amount,$price_args)); ?></strong> </td>
+          <td>
+              <span><?php echo wp_kses_post( $status); ?></span>
+              <?php if ($payment_order && !$payment_order->is_paid() && $payment_order->needs_payment()): ?>
+                  <a href="<?php echo esc_url($payment_order->get_checkout_payment_url()); ?>" class="button pay" style="margin-right: 8px; font-size: 11px; padding: 4px 10px; background: #0f172a; color: #fff;">
+                      <?php esc_html_e('پرداخت آنلاین این قسط', 'deposits-partial-payments-for-woocommerce'); ?>
+                  </a>
+              <?php endif; ?>
+          </td>
       </tr>
     <?php
     }

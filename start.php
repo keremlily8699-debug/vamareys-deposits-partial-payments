@@ -80,6 +80,19 @@ if (file_exists(AWCDP_PLUGIN_PATH . 'includes/blocks/main.php')) {
     require_once AWCDP_PLUGIN_PATH . 'includes/blocks/main.php';
 }
 
+// Load Vamariz Installments Core Orchestrator
+if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-core.php')) {
+    require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-core.php';
+    Vamariz_Core::instance();
+}
+
+register_activation_hook(__FILE__, function() {
+    if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php')) {
+        require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php';
+        Vamariz_Roles::instance()->register_role();
+    }
+});
+
 add_action('current_screen', 'awcpd_setup_screen');
 
 if (!function_exists('awcpd_setup_screen')) {
