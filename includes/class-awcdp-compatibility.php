@@ -34,64 +34,64 @@ class AWCDP_Compatibility
 	function awcdp_load_compatibility(){
 		
         if ( class_exists( 'WFFN_Core' ) ) {
-		    require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/funnel-builder.php';
+		    require_once __DIR__ . '/compatibility/funnel-builder.php';
         }
 		
         if ( class_exists( 'WC_Bookings' ) ) {
-		    require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/woocommerce-bookings.php';
+		    require_once __DIR__ . '/compatibility/woocommerce-bookings.php';
         }
 
         if ( class_exists( 'WC_Appointments' ) ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/woocommerce-appointments.php';
+            require_once __DIR__ . '/compatibility/woocommerce-appointments.php';
         }
 
         if ( class_exists( 'Iconic_Flux_Checkout' ) ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/flux-checkout.php';
+            require_once __DIR__ . '/compatibility/flux-checkout.php';
         }
 
         if (in_array('woo-stripe-payment/stripe-payments.php', apply_filters('active_plugins', get_option('active_plugins')))  ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/woo-stripe-payment.php';
+            require_once __DIR__ . '/compatibility/woo-stripe-payment.php';
         }
 
         if ( class_exists( 'WC_Order_Export_Admin' ) ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/woocommerce-order-export.php';
+            require_once __DIR__ . '/compatibility/woocommerce-order-export.php';
         }
 
         if ( class_exists( 'YITH_WCBK' ) ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/yith-woocommerce-booking-premium.php';
+            require_once __DIR__ . '/compatibility/yith-woocommerce-booking-premium.php';
         }
 
-        require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR .  'compatibility/merchant-pro.php';
+        require_once __DIR__ . '/compatibility/merchant-pro.php';
 
-        require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'compatibility/pymntpl-paypal-woocommerce.php';
+        require_once __DIR__ . '/compatibility/pymntpl-paypal-woocommerce.php';
         
         // pixelyoursite
         if( function_exists('PYS') || class_exists('PixelYourSite\PYS') || class_exists('PixelYourSite\Events') || function_exists('pys_get_option') ){
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'compatibility/pixelyoursite.php';
+            require_once __DIR__ . '/compatibility/pixelyoursite.php';
         }
 
         if ( in_array('mollie-payments-for-woocommerce/mollie-payments-for-woocommerce.php', apply_filters('active_plugins', get_option('active_plugins'))) || defined('M4W_PLUGIN_DIR') || class_exists('\Mollie\WooCommerce\Payment\MollieOrderService') ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'compatibility/mollie-payments.php';
+            require_once __DIR__ . '/compatibility/mollie-payments.php';
         }
 		
 		if ( class_exists( 'WC_Klarna_Payments' ) || class_exists( 'KP_WC' ) || in_array('klarna-payments-for-woocommerce/klarna-payments-for-woocommerce.php', apply_filters('active_plugins', get_option('active_plugins'))) ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'compatibility/klarna-payments.php';
+            require_once __DIR__ . '/compatibility/klarna-payments.php';
         }
 
         if ( class_exists( 'WPCleverWpcbn' ) || in_array('wpc-buy-now-button/wpc-buy-now-button.php', apply_filters('active_plugins', get_option('active_plugins'))) ) {
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'compatibility/wpc-buy-now-button.php';
+            require_once __DIR__ . '/compatibility/wpc-buy-now-button.php';
         }
         
         if ( class_exists( 'WC_Stripe' ) ) { 
-            require_once realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'compatibility/woocommerce-gateway-stripe.php';
+            require_once __DIR__ . '/compatibility/woocommerce-gateway-stripe.php';
         }
         
         if (in_array('woocommerce-paypal-payments/woocommerce-paypal-payments.php', apply_filters('active_plugins', get_option('active_plugins')))  ) {
-            require_once realpath( plugin_dir_path( __FILE__ ) ) . DIRECTORY_SEPARATOR . 'compatibility/woocommerce-paypal-payments.php';
+            require_once __DIR__ . '/compatibility/woocommerce-paypal-payments.php';
         }
 
         if (in_array('woocommerce-square/woocommerce-square.php', apply_filters('active_plugins', get_option('active_plugins')))  ) {
-            require_once realpath( plugin_dir_path( __FILE__ ) ) . DIRECTORY_SEPARATOR . 'compatibility/woocommerce-square.php';
+            require_once __DIR__ . '/compatibility/woocommerce-square.php';
         }
 
 

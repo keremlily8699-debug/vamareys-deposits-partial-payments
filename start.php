@@ -26,7 +26,7 @@ define('AWCDP_DEPOSITS_AMOUNT', '_awcdp_deposits_deposit_amount');
 define('AWCDP_DEPOSITS_FORCE', '_awcdp_deposit_force_deposit');
 define('AWCDP_PLUGIN_PATH',  plugin_dir_path( __FILE__ ) );
 
-require_once(realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'includes/helpers.php');
+require_once AWCDP_PLUGIN_PATH . 'includes/helpers.php';
 
 if (!function_exists('awcdp_init')) {
 
@@ -43,13 +43,17 @@ if (!function_exists('awcdp_autoloader')) {
     function awcdp_autoloader($class_name)
     {
       if (0 === strpos($class_name, 'AWCDP_Email')) {
-          $classes_dir = realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR. 'emails'. DIRECTORY_SEPARATOR ;
+          $classes_dir = AWCDP_PLUGIN_PATH . 'includes/emails/';
           $class_file = 'class-' . str_replace('_', '-', strtolower($class_name)) . '.php';
-          require_once $classes_dir . $class_file;
+          if (file_exists($classes_dir . $class_file)) {
+              require_once $classes_dir . $class_file;
+          }
       } else if (0 === strpos($class_name, 'AWCDP')) {
-          $classes_dir = realpath(plugin_dir_path(__FILE__)) . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR;
+          $classes_dir = AWCDP_PLUGIN_PATH . 'includes/';
           $class_file = 'class-' . str_replace('_', '-', strtolower($class_name)) . '.php';
-          require_once $classes_dir . $class_file;
+          if (file_exists($classes_dir . $class_file)) {
+              require_once $classes_dir . $class_file;
+          }
       }
     }
 
