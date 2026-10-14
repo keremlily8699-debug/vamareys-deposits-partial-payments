@@ -42,8 +42,10 @@ if ( ! class_exists( 'Comp_Woocommerce_Appointments' ) ) {
 		
 		public function awcdp_wc_register_custom_post_status() {
 			if ( is_admin() && isset( $_GET['post_type'] ) && $_GET['post_type'] === 'wc_appointment' ) {
+				$tip_text = _x( 'Partially Paid', 'deposits-partial-payments-for-woocommerce', 'deposits-partial-payments-for-woocommerce' );
+				$tooltip  = function_exists('wc_sanitize_tooltip') ? wc_sanitize_tooltip( $tip_text ) : esc_attr( $tip_text );
 				register_post_status( 'wc-partially-paid', array(
-					'label'                     => '<span class="status-partial-payment tips" data-tip="' . wc_sanitize_tooltip( _x( 'Partially Paid', 'deposits-partial-payments-for-woocommerce', 'deposits-partial-payments-for-woocommerce' ) ) . '">' . _x( 'Partially Paid', 'deposits-partial-payments-for-woocommerce', 'deposits-partial-payments-for-woocommerce' ) . '</span>',
+					'label'                     => '<span class="status-partial-payment tips" data-tip="' . $tooltip . '">' . $tip_text . '</span>',
 					'exclude_from_search'       => false,
 					'public'                    => true,
 					'show_in_admin_all_list'    => true,

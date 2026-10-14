@@ -239,13 +239,15 @@ class AWCDP_Admin_List_Table_Orders extends AWCPD_Admin_List_Table {
 			$latest_note = current( $latest_notes );
 
 			if ( isset( $latest_note->content ) && 1 === $approved_comments_count ) {
-				$tooltip = wc_sanitize_tooltip( $latest_note->content );
+				$tooltip = function_exists('wc_sanitize_tooltip') ? wc_sanitize_tooltip( $latest_note->content ) : esc_attr( $latest_note->content );
 			} elseif ( isset( $latest_note->content ) ) {
 				/* translators: %d: notes count */
-				$tooltip = wc_sanitize_tooltip( $latest_note->content . '<br/><small style="display:block">' . sprintf( _n( 'Plus %d other note', 'Plus %d other notes', ( $approved_comments_count - 1 ), 'woocommerce' ), $approved_comments_count - 1 ) . '</small>' );
+				$note_txt = $latest_note->content . '<br/><small style="display:block">' . sprintf( _n( 'Plus %d other note', 'Plus %d other notes', ( $approved_comments_count - 1 ), 'woocommerce' ), $approved_comments_count - 1 ) . '</small>';
+				$tooltip = function_exists('wc_sanitize_tooltip') ? wc_sanitize_tooltip( $note_txt ) : wp_kses_post( $note_txt );
 			} else {
 				/* translators: %d: notes count */
-				$tooltip = wc_sanitize_tooltip( sprintf( _n( '%d note', '%d notes', $approved_comments_count, 'woocommerce' ), $approved_comments_count ) );
+				$note_txt = sprintf( _n( '%d note', '%d notes', $approved_comments_count, 'woocommerce' ), $approved_comments_count );
+				$tooltip = function_exists('wc_sanitize_tooltip') ? wc_sanitize_tooltip( $note_txt ) : esc_attr( $note_txt );
 			}
 		}
 

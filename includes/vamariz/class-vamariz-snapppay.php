@@ -88,16 +88,17 @@ class Vamariz_SnappPay {
             return;
         }
 
+        $main_file = defined('AWCDP_FILE') ? AWCDP_FILE : dirname(dirname(__DIR__)) . '/start.php';
         wp_enqueue_style(
             'vamariz-frontend-css',
-            plugins_url('assets/css/vamariz-frontend.css', dirname(dirname(__FILE__))),
+            plugins_url('assets/css/vamariz-frontend.css', $main_file),
             array(),
             AWCDP_VERSION
         );
 
         wp_enqueue_script(
             'vamariz-product-js',
-            plugins_url('assets/js/vamariz-product.js', dirname(dirname(__FILE__))),
+            plugins_url('assets/js/vamariz-product.js', $main_file),
             array('jquery'),
             AWCDP_VERSION,
             true

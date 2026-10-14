@@ -172,13 +172,18 @@ class AWCDP_Front_End
 
 
     public function check_woocommerce_active() {
-        if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+        if (class_exists('WooCommerce')) {
             return true;
         }
-        if (is_multisite()) {
-            $plugins = get_site_option('active_sitewide_plugins');
-            if (isset($plugins['woocommerce/woocommerce.php']))
+        $active_plugins = apply_filters('active_plugins', (array) get_option('active_plugins', array()));
+        if (is_array($active_plugins) && in_array('woocommerce/woocommerce.php', $active_plugins, true)) {
+            return true;
+        }
+        if (function_exists('is_multisite') && is_multisite()) {
+            $plugins = get_site_option('active_sitewide_plugins', array());
+            if (is_array($plugins) && isset($plugins['woocommerce/woocommerce.php'])) {
                 return true;
+            }
         }
         return false;
     }
@@ -228,15 +233,15 @@ class AWCDP_Front_End
       return $this->awcdp_get_deposit_container($product_id);
     }
 
-    function awcdp_get_deposit_container($product_id){
+    function awcdp_get_deposit_container($product_id = ''){
 
       if( $product_id != ''){
         $product_id = $product_id;
         $product = wc_get_product($product_id);
       } else {
         global $product;
-        if($product){
-          $product_id = $product->get_id() ;
+        if($product && is_object($product) && method_exists($product, 'get_id')){
+          $product_id = $product->get_id();
         }
       }
 
@@ -342,7 +347,7 @@ class AWCDP_Front_End
          if (!$is_ajax && $product->get_type() == 'booking' || $product->get_type() == 'composite') {
            $amount = '<span class=\'amount\'>' . round($deposit_amount, wc_get_price_decimals()) . '%' . '</span>';
          }
-         if (!$product->is_sold_individually()) {
+         if (method_exists($product, 'is_sold_individually') && !$product->is_sold_individually()) {
            $suffix = esc_html__('per item', 'deposits-partial-payments-for-woocommerce');
          } else {
            $suffix = '';
@@ -573,9 +578,11 @@ class AWCDP_Front_End
     }
 
 	function check_aco_dynamic_pricing_active() {
-		if( in_array('aco-woo-dynamic-pricing/start.php', apply_filters('active_plugins', get_option('active_plugins'))) || in_array('aco-woo-dynamic-pricing-pro/start.php', apply_filters('active_plugins', get_option('active_plugins'))) ) {
+        $active_plugins = apply_filters('active_plugins', (array) get_option('active_plugins', array()));
+		if( is_array($active_plugins) && (in_array('aco-woo-dynamic-pricing/start.php', $active_plugins, true) || in_array('aco-woo-dynamic-pricing-pro/start.php', $active_plugins, true)) ) {
             return true;
         }
+        return false;
 	}
 
     function awcdp_update_deposit_meta($product, $quantity, &$cart_item_data, $cart_item_key) {
@@ -2012,7 +2019,10 @@ class AWCDP_Front_End
     }
 
 
-    function awcdp_disable_reorder_for_partial_payments($order_id){
+    function awcdp_disable_reorder_for_partial_payments($order_id = 0){
+      if (!$order_id || !function_exists('wc_get_order')) {
+        return;
+      }
       $order = wc_get_order($order_id);
       if ($order && $order->get_type() == AWCDP_POST_TYPE) {
         remove_action('woocommerce_thankyou', 'woocommerce_order_details_table', 10);
@@ -2023,10 +2033,13 @@ class AWCDP_Front_End
       }
     }
 
-    function awcdp_show_myaccount_partial_payments_summary($order){
+    function awcdp_show_myaccount_partial_payments_summary($order = null){
+        if (!$order || !is_object($order) || !method_exists($order, 'get_meta')) {
+            return;
+        }
 
         $has_deposit = $order->get_meta('_awcdp_deposits_order_has_deposit', true);
-        if (is_account_page() && $has_deposit == 'yes' && apply_filters('awcdp_myaccount_show_partial_payments_summary', true, $order)) {
+        if (function_exists('is_account_page') && is_account_page() && $has_deposit == 'yes' && apply_filters('awcdp_myaccount_show_partial_payments_summary', true, $order)) {
             $schedule = $order->get_meta('_awcdp_deposits_payment_schedule', true);
             if ( is_array($schedule)){
 
@@ -2156,8 +2169,10 @@ class AWCDP_Front_End
       return $status;
     }
 
-    function awcdp_adjust_second_payment_status($order_id){
-
+    function awcdp_adjust_second_payment_status($order_id = 0){
+        if (!$order_id || !function_exists('wc_get_order')) {
+            return;
+        }
         $order = wc_get_order($order_id);
         if ($order) {
         $has_deposit = $order->get_meta('_awcdp_deposits_order_has_deposit', true);

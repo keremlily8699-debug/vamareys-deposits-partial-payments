@@ -100,16 +100,16 @@ class Vamariz_Roles {
             $user = get_userdata($user_id);
         }
 
-        if (!$user || empty($user->roles)) {
+        if (!$user || empty($user->roles) || !is_array($user->roles)) {
             return false;
         }
 
         // Administrators can always preview and test installment capabilities
-        if (in_array('administrator', $user->roles, true)) {
+        if (in_array('administrator', (array) $user->roles, true)) {
             return true;
         }
 
-        return in_array(self::ROLE_SLUG, $user->roles, true);
+        return in_array(self::ROLE_SLUG, (array) $user->roles, true);
     }
 
     /**

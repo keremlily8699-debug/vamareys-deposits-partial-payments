@@ -43,16 +43,17 @@ class Vamariz_Dashboard {
             return;
         }
 
+        $main_file = defined('AWCDP_FILE') ? AWCDP_FILE : dirname(dirname(__DIR__)) . '/start.php';
         wp_enqueue_style(
             'vamariz-backend-css',
-            plugins_url('assets/css/vamariz-backend.css', dirname(dirname(__FILE__))),
+            plugins_url('assets/css/vamariz-backend.css', $main_file),
             array(),
             AWCDP_VERSION
         );
 
         wp_enqueue_script(
             'vamariz-backend-js',
-            plugins_url('assets/js/vamariz-backend.js', dirname(dirname(__FILE__))),
+            plugins_url('assets/js/vamariz-backend.js', $main_file),
             array('jquery'),
             AWCDP_VERSION,
             true

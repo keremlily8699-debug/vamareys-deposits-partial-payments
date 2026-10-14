@@ -145,13 +145,18 @@ class AWCDP_Backend
     }
 
 	public function check_woocommerce_active() {
-        if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+        if (class_exists('WooCommerce')) {
             return true;
         }
-        if (is_multisite()) {
-            $plugins = get_site_option('active_sitewide_plugins');
-            if (isset($plugins['woocommerce/woocommerce.php']))
+        $active_plugins = apply_filters('active_plugins', (array) get_option('active_plugins', array()));
+        if (is_array($active_plugins) && in_array('woocommerce/woocommerce.php', $active_plugins, true)) {
+            return true;
+        }
+        if (function_exists('is_multisite') && is_multisite()) {
+            $plugins = get_site_option('active_sitewide_plugins', array());
+            if (is_array($plugins) && isset($plugins['woocommerce/woocommerce.php'])) {
                 return true;
+            }
         }
         return false;
     }
