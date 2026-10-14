@@ -42,7 +42,9 @@ class AWCDP_Deposits
     }
 
     function awcdp_register_post_types(){
-
+      if (!function_exists('wc_register_order_type')) {
+        return;
+      }
       $post_type = AWCDP_POST_TYPE;
       wc_register_order_type(
             $post_type,

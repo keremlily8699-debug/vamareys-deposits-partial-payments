@@ -62,6 +62,10 @@ class Vamariz_SMS {
             'text' => $text,
         );
 
+        if (!function_exists('wp_remote_post')) {
+            return array('success' => false, 'message' => 'WordPress HTTP API not loaded.');
+        }
+
         $response = wp_remote_post($api_url, array(
             'method'      => 'POST',
             'timeout'     => 15,
@@ -95,8 +99,8 @@ class Vamariz_SMS {
      * Normalize Iranian phone numbers into 09xxxxxxxxx format.
      */
     public static function normalize_phone($phone) {
-        $phone = trim($phone);
-        $phone = str_replace(array(' ', '-', '+98', '0098'), array('', '', '0', '0'), $phone);
+        $phone = trim((string) $phone);
+
         // Convert Persian/Arabic digits
         $persian = array('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹');
         $arabic  = array('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩');
@@ -104,11 +108,21 @@ class Vamariz_SMS {
         $phone = str_replace($persian, $english, $phone);
         $phone = str_replace($arabic, $english, $phone);
 
-        if (substr($phone, 0, 1) !== '0') {
+        // Strip non-digit characters except leading +
+        $phone = preg_replace('/[^\d+]/', '', $phone);
+
+        // Normalize country prefix (+98, 0098, 989..., 9...)
+        if (strpos($phone, '+98') === 0) {
+            $phone = '0' . substr($phone, 3);
+        } elseif (strpos($phone, '0098') === 0) {
+            $phone = '0' . substr($phone, 4);
+        } elseif (strpos($phone, '98') === 0 && strlen($phone) === 12 && substr($phone, 2, 1) === '9') {
+            $phone = '0' . substr($phone, 2);
+        } elseif (strlen($phone) === 10 && substr($phone, 0, 1) === '9') {
             $phone = '0' . $phone;
         }
 
-        return preg_match('/^09[0-9]{9}$/', $phone) ? $phone : $phone;
+        return $phone;
     }
 
     /**
@@ -265,26 +279,49 @@ class Vamariz_SMS {
         $today = current_time('timestamp');
         $today_str = current_time('Y-m-d');
 
-        // Query pending installment sub-orders
-        $args = array(
-            'post_type'      => AWCDP_POST_TYPE,
-            'post_status'    => array('wc-pending', 'pending'),
-            'posts_per_page' => 100,
-            'meta_query'     => array(
-                array(
-                    'key'     => '_vamariz_due_date',
-                    'compare' => 'EXISTS',
+        // Query pending installment sub-orders (supports HPOS and legacy storage)
+        $sub_orders = array();
+        if (function_exists('wc_get_orders')) {
+            $sub_orders = wc_get_orders(array(
+                'type'        => AWCDP_POST_TYPE,
+                'status'      => array('wc-pending', 'pending'),
+                'limit'       => 100,
+                'meta_query'  => array(
+                    array(
+                        'key'     => '_vamariz_due_date',
+                        'compare' => 'EXISTS',
+                    ),
                 ),
-            ),
-        );
+            ));
+        } else {
+            $args = array(
+                'post_type'      => AWCDP_POST_TYPE,
+                'post_status'    => array('wc-pending', 'pending'),
+                'posts_per_page' => 100,
+                'meta_query'     => array(
+                    array(
+                        'key'     => '_vamariz_due_date',
+                        'compare' => 'EXISTS',
+                    ),
+                ),
+            );
 
-        $query = new WP_Query($args);
-        if (!$query->have_posts()) {
+            $query = new WP_Query($args);
+            if ($query->have_posts()) {
+                foreach ($query->posts as $post) {
+                    $order = wc_get_order($post->ID);
+                    if ($order) {
+                        $sub_orders[] = $order;
+                    }
+                }
+            }
+        }
+
+        if (empty($sub_orders)) {
             return;
         }
 
-        foreach ($query->posts as $post) {
-            $sub_order = wc_get_order($post->ID);
+        foreach ($sub_orders as $sub_order) {
             if (!$sub_order || $sub_order->is_paid()) {
                 continue;
             }

@@ -243,7 +243,7 @@ class AWCDP_Front_End
       $awcdp_gs = get_option('awcdp_general_settings');
       $require_login = (isset($awcdp_gs['require_login']) && $awcdp_gs['require_login'] == 1) ? 1 : 0;
 
-      if( !is_user_logged_in() && $require_login == 1 ){
+      if( function_exists('is_user_logged_in') && !is_user_logged_in() && $require_login == 1 ){
         return;
       }
      
@@ -485,12 +485,12 @@ class AWCDP_Front_End
     $awcdp_gs = get_option('awcdp_general_settings');
     $require_login = (isset($awcdp_gs['require_login']) && $awcdp_gs['require_login'] == 1) ? 1 : 0;
 
-    if( !is_user_logged_in() && $require_login == 1 ){
+    if( function_exists('is_user_logged_in') && !is_user_logged_in() && $require_login == 1 ){
       return 0;
     }
 
     $disallowed_roles = ( isset($awcdp_gs['disable_roles']) ) ? $awcdp_gs['disable_roles'] : '';
-    $current_user = wp_get_current_user()->roles;
+    $current_user = (function_exists('wp_get_current_user') && is_object(wp_get_current_user())) ? wp_get_current_user()->roles : array();
 
     if( is_array($disallowed_roles) && !empty($disallowed_roles) ){
       if( is_array($current_user) && !empty($current_user) ){
@@ -2120,7 +2120,7 @@ class AWCDP_Front_End
 
     function awcdp_partial_payment_number($number, $order){
 
-      if (is_order_received_page() && did_action('woocommerce_before_thankyou') && !did_action('woocommerce_thankyou')){
+      if (function_exists('is_order_received_page') && is_order_received_page() && did_action('woocommerce_before_thankyou') && !did_action('woocommerce_thankyou')){
          return $number;
       }
 

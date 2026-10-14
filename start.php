@@ -81,17 +81,35 @@ if (file_exists(AWCDP_PLUGIN_PATH . 'includes/blocks/main.php')) {
 }
 
 // Load Vamariz Installments Core Orchestrator
-add_action('plugins_loaded', function() {
-    if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-core.php')) {
-        require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-core.php';
-        Vamariz_Core::instance();
+if (!function_exists('awcdp_load_vamariz')) {
+    function awcdp_load_vamariz() {
+        if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-core.php')) {
+            require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-core.php';
+            Vamariz_Core::instance();
+        }
     }
-}, 5);
+}
+
+if (did_action('plugins_loaded')) {
+    awcdp_load_vamariz();
+} else {
+    add_action('plugins_loaded', 'awcdp_load_vamariz', 5);
+}
 
 register_activation_hook(__FILE__, function() {
     if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php')) {
         require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-roles.php';
         Vamariz_Roles::activate();
+    }
+    if (file_exists(AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-sms.php')) {
+        require_once AWCDP_PLUGIN_PATH . 'includes/vamariz/class-vamariz-sms.php';
+        Vamariz_SMS::instance()->maybe_schedule_cron();
+    }
+});
+
+register_deactivation_hook(__FILE__, function() {
+    if (function_exists('wp_clear_scheduled_hook')) {
+        wp_clear_scheduled_hook('vamariz_daily_installment_cron');
     }
 });
 
@@ -99,7 +117,7 @@ add_action('current_screen', 'awcpd_setup_screen');
 
 if (!function_exists('awcpd_setup_screen')) {
 function awcpd_setup_screen() {
-
+    $screen_id = '';
     if ( function_exists( 'get_current_screen' ) ) {
         $screen    = get_current_screen();
         $screen_id = isset( $screen, $screen->id ) ? $screen->id : '';

@@ -80,6 +80,9 @@ function awcdp_register_block_category($categories) {
 add_action('init', 'awcdp_register_blocks');
 
 function awcdp_register_blocks() {
+    if (!function_exists('register_block_type_from_metadata')) {
+        return;
+    }
     $blocks_dir = __DIR__ . '/build/js/';
     
     if (file_exists($blocks_dir . 'deposit-slider/block.json')) {

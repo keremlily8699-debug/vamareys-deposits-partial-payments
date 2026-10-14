@@ -36,7 +36,7 @@ class AWCDP_Order extends WC_Order {
   function get_address_prop($prop, $address = 'billing', $context = 'view'){
     $parent = wc_get_order($this->get_parent_id());
     if($parent){
-      return $parent->get_address_prop($prop, $address = 'billing', $context = 'view');
+      return $parent->get_address_prop($prop, $address, $context);
     }
     $value = null;
     if (array_key_exists($prop, $this->data[$address])) {
@@ -225,7 +225,7 @@ class AWCDP_Order extends WC_Order {
   }
 
   function get_order_number(){
-    if(is_order_received_page() && did_action('woocommerce_before_thankyou') && !did_action('woocommerce_thankyou')){
+    if(function_exists('is_order_received_page') && is_order_received_page() && did_action('woocommerce_before_thankyou') && !did_action('woocommerce_thankyou')){
       return (string) apply_filters( 'woocommerce_order_number', $this->get_parent_id(), $this );
     }
     return (string) apply_filters( 'woocommerce_order_number', $this->get_id(), $this );
@@ -257,7 +257,7 @@ class AWCDP_Order extends WC_Order {
 
   function get_formatted_billing_full_name(){
     $parent = wc_get_order($this->get_parent_id());
-    if($parent) {
+    if($parent && method_exists($parent, 'get_formatted_billing_full_name')) {
       return $parent->get_formatted_billing_full_name();
     }
     /* translators: 1: first name 2: last name */
@@ -266,7 +266,7 @@ class AWCDP_Order extends WC_Order {
 
   function get_formatted_shipping_full_name(){
     $parent = wc_get_order($this->get_parent_id());
-    if($parent) {
+    if($parent && method_exists($parent, 'get_formatted_shipping_full_name')) {
       return $parent->get_formatted_shipping_full_name();
     }
     /* translators: 1: first name 2: last name */

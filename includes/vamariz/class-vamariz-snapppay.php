@@ -35,12 +35,12 @@ class Vamariz_SnappPay {
      */
     public function filter_gateways_for_installment_customer($gateways) {
         if (!is_admin() && Vamariz_Roles::is_installment_customer()) {
-            // Unset SnappPay gateway IDs
-            if (isset($gateways['WC_Gateway_SnappPay'])) {
-                unset($gateways['WC_Gateway_SnappPay']);
-            }
-            if (isset($gateways['snapppay'])) {
-                unset($gateways['snapppay']);
+            if (is_array($gateways)) {
+                foreach ($gateways as $id => $gateway) {
+                    if (stripos($id, 'snapppay') !== false || (is_object($gateway) && stripos(get_class($gateway), 'snapppay') !== false)) {
+                        unset($gateways[$id]);
+                    }
+                }
             }
         }
         return $gateways;

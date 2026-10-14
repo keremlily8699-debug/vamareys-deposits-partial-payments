@@ -58,11 +58,14 @@ class Vamariz_Installments {
      * Validate customer limits and overdue installments before checkout.
      */
     public function validate_customer_eligibility() {
-        if (!is_user_logged_in() || !Vamariz_Roles::is_installment_customer()) {
+        if (!function_exists('is_user_logged_in') || !is_user_logged_in() || !Vamariz_Roles::is_installment_customer()) {
             return;
         }
 
-        $user_id = get_current_user_id();
+        $user_id = function_exists('get_current_user_id') ? get_current_user_id() : 0;
+        if (!$user_id) {
+            return;
+        }
 
         // 1. Check for unpaid overdue installments
         if ($this->has_overdue_installments($user_id)) {

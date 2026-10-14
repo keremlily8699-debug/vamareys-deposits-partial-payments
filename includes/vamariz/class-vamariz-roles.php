@@ -52,11 +52,19 @@ class Vamariz_Roles {
             return;
         }
 
-        if (!get_role(self::ROLE_SLUG)) {
-            $customer_role = get_role('customer');
-            $caps = ($customer_role && !empty($customer_role->capabilities)) ? $customer_role->capabilities : array('read' => true);
-            $caps['use_vamariz_installments'] = true;
+        $customer_role = get_role('customer');
+        $caps = ($customer_role && !empty($customer_role->capabilities)) ? $customer_role->capabilities : array('read' => true);
+        $caps['use_vamariz_installments'] = true;
+
+        $existing_role = get_role(self::ROLE_SLUG);
+        if (!$existing_role) {
             add_role(self::ROLE_SLUG, self::ROLE_NAME, $caps);
+        } else {
+            foreach ($caps as $cap => $grant) {
+                if ($grant && !$existing_role->has_cap($cap)) {
+                    $existing_role->add_cap($cap);
+                }
+            }
         }
     }
 
@@ -71,12 +79,16 @@ class Vamariz_Roles {
             return false;
         }
 
-        if (!$user_id) {
+        if ($user_id === null) {
             if (!is_user_logged_in()) {
                 return false;
             }
             $user = wp_get_current_user();
         } else {
+            $user_id = intval($user_id);
+            if ($user_id <= 0) {
+                return false;
+            }
             if (!function_exists('get_userdata')) {
                 return false;
             }
@@ -99,7 +111,7 @@ class Vamariz_Roles {
      * Render role assignment toggle in user edit screen.
      */
     public function render_user_profile_fields($user) {
-        if (!current_user_can('manage_woocommerce') && !current_user_can('promote_users')) {
+        if (!function_exists('current_user_can') || (!current_user_can('manage_woocommerce') && !current_user_can('promote_users'))) {
             return;
         }
 
@@ -126,7 +138,7 @@ class Vamariz_Roles {
      * Save user role toggle from profile.
      */
     public function save_user_profile_fields($user_id) {
-        if (!current_user_can('manage_woocommerce') && !current_user_can('promote_users')) {
+        if (!function_exists('current_user_can') || (!current_user_can('manage_woocommerce') && !current_user_can('promote_users'))) {
             return;
         }
 
@@ -161,7 +173,11 @@ class Vamariz_Roles {
             $token = sanitize_text_field(wp_unslash($_GET['vamariz_invite']));
             $invite = self::get_invite($token);
             if ($invite && $invite['status'] === 'pending') {
-                setcookie('vamariz_invite_token', $token, time() + 86400 * 3, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                if (!headers_sent()) {
+                    $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
+                    $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+                    setcookie('vamariz_invite_token', $token, time() + 86400 * 3, $cookie_path, $cookie_domain, is_ssl(), true);
+                }
             }
         }
     }
@@ -217,7 +233,11 @@ class Vamariz_Roles {
                 $user->add_role(self::ROLE_SLUG);
                 self::mark_invite_used($token, $customer_id);
                 // Clear cookie
-                setcookie('vamariz_invite_token', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
+                if (!headers_sent()) {
+                    $cookie_path   = defined('COOKIEPATH') ? COOKIEPATH : '/';
+                    $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+                    setcookie('vamariz_invite_token', '', time() - 3600, $cookie_path, $cookie_domain);
+                }
             }
         }
     }

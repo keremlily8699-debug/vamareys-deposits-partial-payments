@@ -63,7 +63,7 @@ class Vamariz_Dashboard {
      * Handle actions such as creating invites, manual SMS, testing SMS, and saving settings.
      */
     public function handle_admin_actions() {
-        if (!current_user_can('manage_woocommerce')) {
+        if (!function_exists('current_user_can') || !current_user_can('manage_woocommerce')) {
             return;
         }
 
@@ -289,15 +289,20 @@ class Vamariz_Dashboard {
                             <?php
                             $child_ids = $order->get_meta('_vamariz_child_suborder_ids', true);
                             $inst_amount = round($order->get_total() / 4);
+                            $edit_url = method_exists($order, 'get_edit_order_url') ? $order->get_edit_order_url() : admin_url('post.php?post=' . $order->get_id() . '&action=edit');
+                            $customer_name = method_exists($order, 'get_formatted_billing_full_name') ? $order->get_formatted_billing_full_name() : trim($order->get_billing_first_name() . ' ' . (method_exists($order, 'get_billing_last_name') ? $order->get_billing_last_name() : ''));
+                            if (empty($customer_name)) {
+                                $customer_name = 'مشتری';
+                            }
                             ?>
                             <tr>
                                 <td>
-                                    <a href="<?php echo esc_url($order->get_edit_order_url()); ?>" class="vamariz-order-link">
+                                    <a href="<?php echo esc_url($edit_url); ?>" class="vamariz-order-link">
                                         <strong>#<?php echo esc_html($order->get_order_number()); ?></strong>
                                     </a>
                                     <br><small><?php echo esc_html($order->get_date_created() ? $order->get_date_created()->date('Y/m/d') : ''); ?></small>
                                 </td>
-                                <td><?php echo esc_html($order->get_formatted_billing_full_name()); ?></td>
+                                <td><?php echo esc_html($customer_name); ?></td>
                                 <td><a href="tel:<?php echo esc_attr($order->get_billing_phone()); ?>"><?php echo esc_html($order->get_billing_phone()); ?></a></td>
                                 <td><strong><?php echo esc_html(number_format($order->get_total())); ?></strong> تومان</td>
 
@@ -344,7 +349,7 @@ class Vamariz_Dashboard {
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="<?php echo esc_url($order->get_edit_order_url()); ?>" class="button button-primary button-small">
+                                    <a href="<?php echo esc_url($edit_url); ?>" class="button button-primary button-small">
                                         مدیریت سفارش
                                     </a>
                                 </td>
