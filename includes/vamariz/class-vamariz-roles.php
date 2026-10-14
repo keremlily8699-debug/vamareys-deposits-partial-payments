@@ -38,12 +38,23 @@ class Vamariz_Roles {
     }
 
     /**
+     * Static activation callback.
+     */
+    public static function activate() {
+        self::instance()->register_role();
+    }
+
+    /**
      * Register installment_customer role with customer capabilities.
      */
     public function register_role() {
+        if (!function_exists('get_role') || !function_exists('add_role')) {
+            return;
+        }
+
         if (!get_role(self::ROLE_SLUG)) {
             $customer_role = get_role('customer');
-            $caps = $customer_role ? $customer_role->capabilities : array('read' => true);
+            $caps = ($customer_role && !empty($customer_role->capabilities)) ? $customer_role->capabilities : array('read' => true);
             $caps['use_vamariz_installments'] = true;
             add_role(self::ROLE_SLUG, self::ROLE_NAME, $caps);
         }
@@ -56,12 +67,19 @@ class Vamariz_Roles {
      * @return bool
      */
     public static function is_installment_customer($user_id = null) {
+        if (!function_exists('is_user_logged_in') || !function_exists('wp_get_current_user')) {
+            return false;
+        }
+
         if (!$user_id) {
             if (!is_user_logged_in()) {
                 return false;
             }
             $user = wp_get_current_user();
         } else {
+            if (!function_exists('get_userdata')) {
+                return false;
+            }
             $user = get_userdata($user_id);
         }
 

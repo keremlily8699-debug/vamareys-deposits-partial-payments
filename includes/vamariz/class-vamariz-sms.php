@@ -26,9 +26,16 @@ class Vamariz_SMS {
     public function __construct() {
         // Daily Cron for reminders
         add_action('vamariz_daily_installment_cron', array($this, 'run_daily_reminders'));
+        add_action('init', array($this, 'maybe_schedule_cron'));
+    }
 
+    public function maybe_schedule_cron() {
+        if (!function_exists('wp_next_scheduled') || !function_exists('wp_schedule_event')) {
+            return;
+        }
         if (!wp_next_scheduled('vamariz_daily_installment_cron')) {
-            wp_schedule_event(strtotime('09:00:00'), 'daily', 'vamariz_daily_installment_cron');
+            $time = strtotime('tomorrow 09:00:00');
+            wp_schedule_event($time ? $time : (time() + 86400), 'daily', 'vamariz_daily_installment_cron');
         }
     }
 
